@@ -24,3 +24,11 @@ Personal project. These rules apply to everything done in this folder.
 ## Git and shipping (from global rules)
 
 - Never commit, push, open a PR, merge, or deploy unless explicitly told by name. Leave changes as uncommitted working-tree edits and report the changed files.
+
+## How changes get to GitHub (repo: pratikjd1999/InstantPhotoes)
+
+- This machine cannot push or commit directly to the GitHub repo (the saved GitHub login is a company one, with no write access to the personal repo). Do not attempt `git push`, forks, or any workaround.
+- The only route is manual: the user creates a **branch on the GitHub web UI** and uploads the changed files/folder there by drag and drop.
+- So: make edits locally, leave them uncommitted, and tell the user which files changed so they can upload them. Do not run `git push`.
+- After an upload, to sync local with GitHub: `git fetch` (anonymous, no credentials) then reset local to the remote branch, only when the user asks, since that discards local commits.
+./scripts/make-upload-bundle.sh
