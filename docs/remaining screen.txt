@@ -1,0 +1,61 @@
+REMAINING SCREENS TO DESIGN IN STITCH
+Project: IP Workspace (Stitch project 5215924601128412052)
+Checked: 28 Oct 2026 (based on screen labels only, not opened)
+Design system to reuse: "Regal Modernity" (burgundy #5B1E2C, ivory background, Newsreader headings, Manrope body)
+Do NOT use the earlier Inter / coral-amber prompts. Tell Stitch to use the project's design system.
+
+-------------------------------------------------------------------
+NOT DESIGNED YET
+-------------------------------------------------------------------
+
+GUEST SIDE (mobile-first, design for MOBILE; the project is set to desktop)
+[ ] 1. /e/[code]  Guest registration
+        - Event page with photographer branding (logo, studio name, event name)
+        - Form: name, phone (Indian 10-digit), selfie (front camera or file), consent checkbox
+        - Consent text: "I agree that my selfie will be used to find my photos from this event."
+        - Selfie states: camera capture, retry (no face / multiple faces), loader while matching
+[ ] 2. /g/[token]  Guest gallery (unless the existing "photo gallary" screen turns out to be this)
+        - Thumbnail grid sorted by capture time, infinite scroll
+        - Empty state: "We haven't found you yet - photos are still being uploaded. Check back later."
+        - Full-screen photo viewer with swipe, download single, "Not me"
+        - Download all (zip) with progress state
+[ ] 3. Guest reclaim: "Enter your phone number" when the cookie is missing
+[ ] 4. Guest closed states: "This gallery has expired. Please contact your photographer." and event closed to registrations (archived)
+
+SHARED
+[ ] 5. /change-password  Forced password change at first login
+[ ] 6. Error pages: 404, no access, session expired
+
+PHOTOGRAPHER SIDE
+[ ] 7. /dashboard/profile  Studio name, display name, phone, website, Instagram, logo + brand image upload (JPEG/PNG, max 5 MB)
+[ ] 8. Printable QR layout: photographer/studio name on top, event name + QR in the middle, "Powered by InstantPhotos" at the bottom (PNG/PDF)
+        -> may already be inside "view event", check first
+
+ADMIN SIDE
+[ ] 9. Admin modals: add photographer, reset password, suspend, delete guest (type DELETE to confirm)
+        -> may already be on the admin screens, check first
+
+-------------------------------------------------------------------
+EXISTING SCREENS TO VERIFY
+-------------------------------------------------------------------
+[ ] Landing page: the visible one is "Landing Page with Features & Social". The "Landing Page with Login" version is HIDDEN. Confirm the login window is on the right side, with the contact block (Pratik, 8857081999, WhatsApp button).
+[ ] "Add new event" vs hidden "P03 - Create Event Wizard": pick one.
+[ ] "view event" (only 1236 px tall): check it covers upload, photo statuses (pending_upload, uploaded, processing, ready, failed, upload_failed), guests, QR and settings.
+[ ] "photo gallary": is it the guest gallery or the photographer's photo grid?
+
+-------------------------------------------------------------------
+ALREADY DESIGNED (per labels)
+-------------------------------------------------------------------
+- Landing page (with Features & Social)
+- Super Admin: Photographers, Events (read-only), Usage & Storage, Account & Privacy
+- P01 Photographer Dashboard
+- P02 All Events
+- Add new event
+- view event
+- photo gallary (purpose unclear)
+
+SUGGESTED ORDER
+1. Guest flow (items 1-4, mobile): carries the core loop
+2. Photographer profile + QR layout (items 7-8)
+3. Change password + error pages (items 5-6)
+4. Admin modals (item 9)

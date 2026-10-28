@@ -1,0 +1,18 @@
+{
+  "name": "instantphotos",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "apps/web",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @instantphotos/web",
+    "build": "npm run build -w @instantphotos/web",
+    "start": "npm run start -w @instantphotos/web",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
