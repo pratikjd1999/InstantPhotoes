@@ -10,7 +10,13 @@
     "dev": "npm run dev -w @instantphotos/web",
     "build": "npm run build -w @instantphotos/web",
     "start": "npm run start -w @instantphotos/web",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:local:start": "bash packages/db/scripts/local-db.sh start",
+    "db:local:stop": "bash packages/db/scripts/local-db.sh stop",
+    "db:generate": "npm run generate -w @instantphotos/db",
+    "db:migrate": "npm run migrate -w @instantphotos/db",
+    "db:seed": "npm run seed -w @instantphotos/db",
+    "db:create-admin": "npm run create-admin -w @instantphotos/db"
   },
   "engines": {
     "node": ">=20"

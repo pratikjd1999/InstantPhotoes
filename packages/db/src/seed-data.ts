@@ -1,15 +1,44 @@
-import type { EventRecord, GuestRecord, Photographer } from "./types";
+// Dummy data for local development and demos. Same people, events and numbers as the earlier in-memory mock,
+// so the admin screens look the same once they read from the database. Never runs in production (see seed.ts).
 
-// Mock data for the admin dashboard until the database exists. Replace with queries in packages/db.
+export interface SeedPhotographer {
+  id: string;
+  code: string;
+  name: string;
+  studioName: string;
+  email: string;
+  phone: string;
+  status: "active" | "suspended";
+  mustChangePassword: boolean;
+  createdAt: string;
+}
 
-const gb = (photos: number) => Math.round(((photos * 8.5) / 1024) * 10) / 10;
-const plusDays = (iso: string, days: number) => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-};
+export interface SeedEvent {
+  id: string;
+  code: string;
+  name: string;
+  photographerId: string;
+  eventDate: string;
+  venue: string;
+  /** Number of photo rows to generate. */
+  photos: number;
+  /** Number of guest rows to generate (the named guests below count toward this). */
+  guests: number;
+  status: "active" | "archived";
+  expiresInDays?: number;
+  /** Set for soft-deleted events: hidden in lists, still counted in usage (D26). */
+  deletedAt?: string;
+}
 
-export const seedPhotographers = (): Photographer[] => [
+export interface SeedGuest {
+  id: string;
+  name: string;
+  phone: string;
+  eventId: string;
+  matchedPhotos: number;
+}
+
+export const seedPhotographers: SeedPhotographer[] = [
   { id: "p1", code: "PHO-8841", name: "Kabir Sharma", studioName: "Kabir Sharma Photography", email: "kabir@sharmaphotography.in", phone: "+91 98201 44521", status: "active", mustChangePassword: false, createdAt: "2026-08-02" },
   { id: "p2", code: "PHO-8842", name: "Rohan Mehra", studioName: "Stories by Rohan Mehra", email: "rohan@storiesbyrohan.com", phone: "+91 98192 11094", status: "active", mustChangePassword: false, createdAt: "2026-08-09" },
   { id: "p3", code: "PHO-8843", name: "Priya Sundaram", studioName: "Lumière Wedding Co.", email: "priya@lumiereweddings.in", phone: "+91 98403 88120", status: "active", mustChangePassword: false, createdAt: "2026-08-21" },
@@ -19,12 +48,7 @@ export const seedPhotographers = (): Photographer[] => [
   { id: "p7", code: "PHO-8847", name: "Neha Kulkarni", studioName: "Frame & Fable", email: "neha@frameandfable.in", phone: "+91 98220 55018", status: "active", mustChangePassword: true, createdAt: "2026-10-20" },
 ];
 
-type EventSeed = Omit<EventRecord, "galleryExpiresAt" | "storageGb" | "deletedAt"> & {
-  expiresInDays?: number;
-  deletedAt?: string | null;
-};
-
-const events: EventSeed[] = [
+export const seedEvents: SeedEvent[] = [
   { id: "e1", code: "EVT-2026-UDR-0091", name: "Aarav & Ananya Wedding", photographerId: "p1", eventDate: "2026-10-24", venue: "Taj Lake Palace, Udaipur", photos: 4820, guests: 512, status: "active" },
   { id: "e2", code: "EVT-2026-UDR-0084", name: "Dev & Rhea Sangeet", photographerId: "p1", eventDate: "2026-10-22", venue: "The Oberoi Udaivilas, Udaipur", photos: 2140, guests: 340, status: "active" },
   { id: "e3", code: "EVT-2026-JDH-0078", name: "Meera & Siddharth Vivah", photographerId: "p2", eventDate: "2026-10-14", venue: "Umaid Bhawan Palace, Jodhpur", photos: 6400, guests: 680, status: "active", expiresInDays: 30 },
@@ -41,15 +65,7 @@ const events: EventSeed[] = [
   { id: "e13", code: "EVT-2026-TEST-0002", name: "Upload rehearsal (deleted)", photographerId: "p5", eventDate: "2026-09-08", venue: "Bengaluru", photos: 500, guests: 7, status: "archived", deletedAt: "2026-09-09T08:00:00Z" },
 ];
 
-export const seedEvents = (): EventRecord[] =>
-  events.map(({ expiresInDays, deletedAt, ...e }) => ({
-    ...e,
-    storageGb: gb(e.photos),
-    galleryExpiresAt: plusDays(e.eventDate, expiresInDays ?? 7),
-    deletedAt: deletedAt ?? null,
-  }));
-
-export const seedGuests = (): GuestRecord[] => [
+export const seedGuests: SeedGuest[] = [
   { id: "g1", name: "Simran Kaur", phone: "+91 98765 43210", eventId: "e1", matchedPhotos: 42 },
   { id: "g2", name: "Rahul Verma", phone: "+91 99887 10234", eventId: "e1", matchedPhotos: 18 },
   { id: "g3", name: "Anjali Desai", phone: "+91 98111 22334", eventId: "e2", matchedPhotos: 27 },

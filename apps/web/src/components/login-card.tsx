@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ADMIN_CONTACT } from "@/lib/contact";
 import { EyeIcon, EyeOffIcon } from "./icons";
 
-// Logs in through POST /api/auth/login. Credentials come from src/config/auth.config.ts until the database exists.
+// Logs in through POST /api/auth/login. Accounts and passwords live in the database.
 export function LoginCard() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);

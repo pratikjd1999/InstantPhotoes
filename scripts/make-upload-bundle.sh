@@ -10,10 +10,10 @@ OUT="../InstantPhotoes-upload"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-# tracked + untracked files that are not git-ignored
+# tracked + untracked files that are not git-ignored (files deleted locally but still tracked by git are skipped)
 git ls-files -co --exclude-standard -z \
-  | grep -zvE '(^|/)(node_modules|\.git|\.next|\.turbo|dist|build|coverage|\.venv|__pycache__)(/|$)|(^|/)\.DS_Store$|(^|/)\.env(\..*)?$|\.pem$|\.key$' \
-  | xargs -0 -I{} rsync -R "{}" "$OUT/"
+  | grep -zvE '(^|/)(node_modules|\.git|\.next|\.turbo|dist|build|coverage|\.venv|__pycache__)(/|$)|(^|/)\.DS_Store$|(^|/)\.env($|\.(local|development|production|test)($|\.))|\.pem$|\.key$' \
+  | xargs -0 -I{} sh -c '[ ! -e "$1" ] || rsync -R "$1" "$2/"' _ {} "$OUT"
 
 COUNT=$(find "$OUT" -type f | wc -l | tr -d ' ')
 SIZE=$(du -sh "$OUT" | cut -f1)

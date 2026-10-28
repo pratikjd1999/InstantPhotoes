@@ -16,6 +16,7 @@ Source of truth for scope: [PRD.md](PRD.md). Remaining design work: [remaining s
 |---|---|
 | Scope, requirements, decisions | [PRD.md](PRD.md) (§5 requirements, §15 decision log, §16 open questions) |
 | Delivery phases and "done when" criteria | PRD §13 (mirrored below) |
+| Database (schema, ER diagram, screen-to-table map, how to run) | [database.md](database.md) |
 | Screen designs | Google Stitch project **IP Workspace** (`5215924601128412052`) |
 | Screens still to design | [remaining screen.txt](remaining%20screen.txt) |
 | Overall progress (this file) | `docs/progress.md`: update the checkboxes after each piece of work |
@@ -31,7 +32,7 @@ Source of truth for scope: [PRD.md](PRD.md). Remaining design work: [remaining s
 | Product definition (PRD) | `[x]` Draft v1.1 done; open questions remain |
 | UI design (Stitch) | `[~]` Admin and photographer screens mostly done, guest screens not done |
 | Phase 0: Setup | `[~]` Monorepo + web app scaffolded; Neon, R2, VM, Tunnel, Sentry, CI not started |
-| Phase 1: Auth and admin | `[~]` Landing page, config-based admin login, session + role guards and all four admin pages built on mock data; database-backed auth and real photographer accounts not started |
+| Phase 1: Auth and admin | `[~]` Landing page, admin login (Better Auth, in Postgres), role guards and all four admin pages run on the Neon dev database; photographer login exists but photographer pages are not built |
 | Phase 2: Profile and events | `[ ]` |
 | Phase 3: Upload and processing | `[ ]` |
 | Phase 4: Face indexing and guest flow | `[ ]` |
@@ -94,7 +95,9 @@ Full detail and order of work in [remaining screen.txt](remaining%20screen.txt).
 **Done when:** app and worker deploy; health checks pass.
 - [x] Monorepo (`apps/web`, `apps/worker`, `packages/core`, `packages/db`): npm workspaces, Next.js 16 + Tailwind 4 + TypeScript in `apps/web`; core/db/worker are placeholders
 - [x] Confirm public npm registry: project `.npmrc` pins `registry.npmjs.org` (global npm config points at a company registry, so keep this file)
-- [ ] Neon Postgres + pgvector
+- [x] Database schema (Drizzle, PRD §8) in `packages/db`: Better Auth tables + photographer_profiles, events, photos, faces (vector 128), guests, guest_photos, guest_sessions, jobs. Migration, dummy-data seed and local Postgres script done (`npm run db:local:start`, `db:migrate`, `db:seed`)
+- [x] Neon Postgres + pgvector: personal dev database migrated and seeded (a production database comes at deploy time)
+- [x] `packages/core` and the API now read and write the database; the in-memory mock is deleted
 - [ ] Cloudflare R2 bucket (private)
 - [ ] Oracle VM + Docker for worker
 - [ ] Cloudflare Tunnel + shared secret
@@ -198,6 +201,8 @@ Targets from PRD §1.4. Fill in the actuals as events happen.
 
 | Date | Update |
 |---|---|
+| 29 Oct 2026 | Admin area runs on the database: Better Auth (login, sessions, change password in Postgres), core services as SQL, rate limit table, role guards checked against the database, Neon dev database migrated and seeded. Config-file login removed. Tested with curl and a real browser. |
+| 28 Oct 2026 | Added the database: full Drizzle schema, first migration (enables pgvector), seed with the same dummy data as the mock (7 photographers, 13 events, 35,510 photos, 3,815 guests), local Postgres script. Seeded totals checked against the old mock: identical. Admin pages still read the mock. |
 | 28 Oct 2026 | Built the four admin pages (Photographers, Events, Usage, Account) from the Stitch designs on mock data, a Hono API under `/api`, config-based admin login with signed session cookie, `proxy.ts` role guards and login rate limit. Tested end to end with Playwright and curl. |
 | 28 Oct 2026 | Scaffolded monorepo and built the landing page in `apps/web` from the Stitch design (desktop and mobile checked, build passes). |
 | 28 Oct 2026 | Created this file. PRD v1.1 done. Stitch checked: admin and photographer screens mostly designed, guest screens not. No code yet. |
