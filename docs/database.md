@@ -4,7 +4,7 @@ Everything about the database in one place: what it is, how the tables relate, w
 
 Source of truth for scope is [PRD.md](PRD.md) (§8 data model, §9 storage, §10 matching). The schema itself is code: `packages/db/src/schema/`. If this file and the code disagree, the code wins; fix this file.
 
-**Status (29 Oct 2026):** the app runs on this database. The Super Admin area (login, photographers, events, usage, guest search and delete, change password) reads and writes Postgres through `packages/core`, with login and sessions handled by Better Auth. Migrated and seeded on a personal **Neon** dev database. See [section 10](#10-whats-wired-and-whats-not).
+**Status (29 Oct 2026):** the app runs on this database. The Super Admin area and the Photographer area (dashboard, events, uploads, gallery, guests, QR, settings, profile and branding, first-login password) read and write Postgres through `packages/core`, with login and sessions handled by Better Auth. Migrated and seeded on a personal **Neon** dev database. See [section 10](#10-whats-wired-and-whats-not).
 
 ---
 
@@ -159,7 +159,7 @@ Types: `text`, `uuid`, `date`, `timestamptz` (all timestamps carry a time zone),
 | photographer_id | FK → `user`; index |
 | name, venue | venue defaults to empty string |
 | event_date | `date` |
-| public_code | unique, `EVT-2026-UDR-0091`; goes in the QR link |
+| public_code | unique, random 10 characters (e.g. `szjgd5t6zj`, no look-alike letters); the QR encodes `{APP_URL}/e/{public_code}` (EVT-2). The link itself is **not stored**: it is built from this code and the site URL |
 | status | `active` / `archived` |
 | gallery_expires_at | `date`: the last day guests can view. Default is `event_date + 7 days` (D11) |
 | created_at, updated_at | |
@@ -249,7 +249,20 @@ The database holds keys; the bytes are in one private R2 bucket (PRD §9).
 | `photographer_profiles.logo_key` | `photographers/{userId}/branding/logo.{ext}` |
 | `photographer_profiles.brand_image_key` | `photographers/{userId}/branding/brand.{ext}` |
 
-Access is always through per-image signed URLs (1 hour for guests). The seed writes realistic keys but no objects exist in R2.
+Access is always through per-image signed URLs (1 hour for viewing, 15 minutes for uploads and original downloads). The browser uploads straight to storage with a presigned PUT URL, so files never pass through the app server (UPL-3).
+
+Two storage drivers, chosen automatically (`packages/core/src/storage.ts`):
+
+| Driver | When | Where files go |
+|---|---|---|
+| `r2` | all of `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` are set. **Required in production** | the private R2 bucket |
+| `local` | development without R2 | `.local/storage/` (git-ignored), served by `/api/storage/*` with HMAC-signed, expiring URLs that behave like R2's |
+
+R2 needs a CORS rule allowing `PUT` and `GET` from the site's origin, or browser uploads fail.
+
+The seed writes realistic keys for its 35,510 photos, but no files exist for them, so their thumbnails show a placeholder tile. Photos uploaded through the app have real files.
+
+Until the face worker exists, uploaded photos stay `uploaded` with a `process_photo` job waiting, and grids show the original as the thumbnail.
 
 ---
 
@@ -264,7 +277,11 @@ Access is always through per-image signed URLs (1 hour for guests). The seed wri
 | Admin: guest search and delete | search by phone, delete a guest's data | `guests`, `events`, `guest_photos`, `guest_sessions` | Search needs at least 4 digits. Delete **removes the rows** (guest, matches, sessions), which is deliberate for privacy (ADM-7). The selfie file in R2 is removed once storage is connected |
 | Admin: Account | change password | `account`, `session` | Changing it revokes the user's other sessions; this one gets a fresh session |
 | Login | email + password | `user`, `account`, `session`, `login_attempts` | Done. Replaced the config file. Suspended accounts are refused and their sessions deleted |
-| Photographer (later) | events, photos, guests, QR, branding | `events`, `photos`, `guests`, `guest_photos`, `photographer_profiles` | Always scoped by `photographer_id` |
+| Photographer: Dashboard (P01) | totals, recent events, storage used | `events`, `photos`, `guests`, `guest_photos` | Only live rows; scoped by `photographer_id` |
+| Photographer: Events (P02), Create (P03) | list, create, archive, delete | `events` (+ counts) | Create assigns a random `public_code` and expiry = date + 7 days |
+| Photographer: Event page (P04) | stats, photos by status, uploads, guests and matches, QR, settings | `events`, `photos`, `jobs`, `guests`, `guest_photos`, `faces` | Upload: `pending_upload` rows → PUT → verified → `uploaded` + job. Photo delete soft-deletes the photo, its faces and its matches |
+| Photographer: Profile (P05) | studio details, logo, brand image, change password | `photographer_profiles`, `account`, `session` | Branding keys under `photographers/{userId}/branding/` |
+| First login (P06) | replace the temporary password | `account`, `user.must_change_password`, `session` | Photographer pages and APIs refuse until this is done (AUTH-4) |
 | Guest (later) | gallery | `guests`, `guest_photos`, `photos`, `guest_sessions` | Gated by `access_token` and `gallery_expires_at` |
 | Face worker (later) | queue and results | `jobs`, `photos`, `faces`, `guest_photos` | Writes `faces`, flips `photos.status` |
 
@@ -282,6 +299,10 @@ Environment (`.env.local` at the repo root, git-ignored; template in `.env.examp
 | `BETTER_AUTH_SECRET` | signs and encrypts sessions; `openssl rand -hex 32`; **required in production** |
 | `BETTER_AUTH_URL` | public site URL (`http://localhost:3000` in dev) |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_DISPLAY_NAME` | the Super Admin, read only by `db:seed` and `db:create-admin`; the password is stored hashed |
+| `ADMIN2_*` | optional second Super Admin, same rules |
+| `SEED_PHOTOGRAPHER_PASSWORD` | optional, dev only: every seeded photographer gets this password |
+| `APP_URL` | public site URL for QR links; defaults to `BETTER_AUTH_URL` |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | photo storage; without them development uses `.local/storage` |
 
 Commands:
 
@@ -324,7 +345,7 @@ Speed: Neon is far from some regions (US East from India is roughly 250 ms per q
 | Matches | 214 (for the 8 named guests) |
 | Jobs | 40 (30 pending, 10 failed) |
 
-It reproduces the old mock's numbers exactly (checked per photographer and for the usage totals). Seeded photographers have **no credentials**, so they cannot log in; photographers created from the admin screen do get a password and can. The seed also creates the Super Admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+It reproduces the old mock's numbers exactly (checked per photographer and for the usage totals). Seeded photographers can log in with `SEED_PHOTOGRAPHER_PASSWORD` when it is set (otherwise they have no credentials). Neha Kulkarni is seeded with a temporary password, so she lands on the first-login screen. Seeded events get random public codes on every seed. The seed also creates the Super Admin from `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ---
 
@@ -337,8 +358,13 @@ It reproduces the old mock's numbers exactly (checked per photographer and for t
 - Photographers: create (with a temporary password they can log in with), suspend (deletes their sessions), reset password.
 - Events, usage and guest search and delete, all as SQL over the real tables.
 
+- Photographer area (P01–P06): every query is scoped to the signed-in photographer; other photographers' events and photos answer 404, and Super Admins get 403.
+- Uploads: batch check (JPEG only, 15 MB, de-duplication by name + size), presigned PUT, server-side verification, job queued; 4 parallel uploads with 3 attempts each.
+
 **Not done yet:**
-- Photographer pages (`/dashboard`, `/change-password`) do not exist, so a photographer can log in but lands on a 404.
+- The face worker: nothing moves photos past `uploaded`, so there are no web copies, thumbnails, faces or new matches yet.
+- Guest pages (`/e/{code}`, `/g/{token}`): the QR link points at a page that does not exist yet.
+- The upload cleanup sweep (UPL-8b) runs in the worker, so abandoned `pending_upload` rows stay until then.
 - `faces`, `guest_sessions` and `jobs` are unused until the worker and guest flow exist (the seed fills `jobs` with sample rows).
 - No row-level security. Access control is enforced in the API (role checks, later `photographer_id` scoping).
 - Better Auth's `admin` plugin is not used; `status` replaces its `banned` fields.

@@ -1,9 +1,10 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomInt, randomUUID } from "node:crypto";
+import { hashPassword } from "better-auth/crypto";
 import { sql } from "drizzle-orm";
 import { ensureSuperAdmin, superAdminsFromEnv } from "./admin-user";
 import { createDb } from "./client";
 import { seedEvents, seedGuests, seedPhotographers } from "./seed-data";
-import { events, guestPhotos, guests, jobs, photoStatus, photographerProfiles, photos, user } from "./schema";
+import { account, events, guestPhotos, guests, jobs, photoStatus, photographerProfiles, photos, user } from "./schema";
 
 // Fills a local database with dummy data. Wipes the app tables first, so it is safe to re-run.
 if (process.env.NODE_ENV === "production") {
@@ -28,6 +29,14 @@ type PhotoStatus = (typeof photoStatus.enumValues)[number];
 const FIRST = ["Aarav", "Diya", "Kabir", "Anaya", "Vihaan", "Ishani", "Reyansh", "Myra", "Arnav", "Kiara", "Dhruv", "Saanvi", "Aditya", "Riya", "Yash", "Tara"];
 const LAST = ["Sharma", "Verma", "Iyer", "Nair", "Singh", "Patel", "Reddy", "Khan", "Gupta", "Joshi", "Menon", "Bose", "Kapoor", "Desai", "Rao", "Mehta"];
 
+// Same alphabet and length as real event codes (packages/core newPublicCode): random, no look-alike characters.
+const CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+const publicCode = () => Array.from({ length: 10 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+
+// Optional: one shared password for every seeded photographer, so the photographer area can be tried locally.
+const photographerPassword = process.env.SEED_PHOTOGRAPHER_PASSWORD;
+const photographerHash = photographerPassword ? await hashPassword(photographerPassword) : null;
+
 let fillerPhone = 0;
 const nextFillerPhone = () => {
   // Distinct 6xxxxxxxxx range so filler guests never collide with the named ones.
@@ -40,7 +49,7 @@ await db.transaction(async (tx) => {
     sql`TRUNCATE login_attempts, guest_sessions, guest_photos, faces, jobs, guests, photos, events, photographer_profiles, session, account, verification, "user" CASCADE`,
   );
 
-  // ---- photographers (no credentials yet: the photographer section and their login come later) ----
+  // ---- photographers (they get a password only when SEED_PHOTOGRAPHER_PASSWORD is set) ----
   await tx.insert(user).values(
     seedPhotographers.map((p) => ({
       id: `seed-${p.id}`,
@@ -53,6 +62,11 @@ await db.transaction(async (tx) => {
       updatedAt: at(p.createdAt),
     })),
   );
+  if (photographerHash) {
+    await tx.insert(account).values(
+      seedPhotographers.map((p) => ({ id: randomUUID(), userId: `seed-${p.id}`, accountId: `seed-${p.id}`, providerId: "credential", password: photographerHash })),
+    );
+  }
   await tx.insert(photographerProfiles).values(
     seedPhotographers.map((p) => ({ userId: `seed-${p.id}`, code: p.code, studioName: p.studioName, phone: p.phone })),
   );
@@ -66,7 +80,7 @@ await db.transaction(async (tx) => {
       name: e.name,
       eventDate: e.eventDate,
       venue: e.venue,
-      publicCode: e.code,
+      publicCode: publicCode(),
       status: e.status,
       galleryExpiresAt: plusDays(e.eventDate, e.expiresInDays ?? 7),
       createdAt: at(plusDays(e.eventDate, -30)),

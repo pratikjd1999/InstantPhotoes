@@ -18,6 +18,20 @@ export interface AuthUser {
   mustChangePassword: boolean;
 }
 
+/** One password rule for every account (first login, profile, admin account). */
+export const PASSWORD_RULES = { minLength: 8 };
+export function passwordProblem(pw: string): string | null {
+  if (pw.length < PASSWORD_RULES.minLength) return "New password must be at least 8 characters.";
+  if (pw.length > 128) return "New password must be 128 characters or fewer.";
+  if (!/[0-9]|[^A-Za-z0-9]/.test(pw)) return "New password must contain a number or a symbol.";
+  return null;
+}
+
+/** Runs a trivial query. Wakes the database if it was paused (Neon scales to zero when idle). */
+export async function pingDatabase(): Promise<void> {
+  await getDb().execute(sql`select 1`);
+}
+
 export const homeForRole = (role: Role) => (role === "super_admin" ? "/admin" : "/dashboard");
 
 export async function getAuthUser(id: string): Promise<AuthUser | null> {

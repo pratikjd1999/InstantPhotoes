@@ -17,3 +17,6 @@ next-env.d.ts
 
 # Local development database
 .local/
+
+# Machine-specific helper (copies the bundle into a local clone)
+scripts/copy-to-github-folder.sh

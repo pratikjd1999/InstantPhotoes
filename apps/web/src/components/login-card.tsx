@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ADMIN_CONTACT } from "@/lib/contact";
 import { EyeIcon, EyeOffIcon } from "./icons";
 
@@ -12,6 +12,12 @@ export function LoginCard() {
   const [showForgot, setShowForgot] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Wake the database in the background as soon as the landing page loads. Neon pauses when idle and the first query
+  // takes 1–2 s, which would otherwise land on the login button. The result doesn't matter, so failures are ignored.
+  useEffect(() => {
+    fetch("/api/health", { cache: "no-store", keepalive: true }).catch(() => {});
+  }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

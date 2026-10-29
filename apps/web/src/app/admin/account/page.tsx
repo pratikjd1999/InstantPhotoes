@@ -132,7 +132,7 @@ function PasswordCard() {
                 <div key={n} className={`rounded-full transition-colors ${s.points >= n ? "bg-secondary" : "bg-surface-high"}`} />
               ))}
             </div>
-            <p className="text-label-sm text-on-surface-variant">At least 8 characters. Mix upper case, numbers and symbols for a stronger password.</p>
+            <p className="text-label-sm text-on-surface-variant">At least 8 characters, including a number or a symbol. Mixing upper case adds strength.</p>
           </div>
         </div>
         <PasswordField id="confirm-password" label="Confirm new password" value={confirm} onChange={setConfirm} autoComplete="new-password" />

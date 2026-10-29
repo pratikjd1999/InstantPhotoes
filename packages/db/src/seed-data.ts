@@ -15,6 +15,7 @@ export interface SeedPhotographer {
 
 export interface SeedEvent {
   id: string;
+  /** Old human-readable reference; kept only to identify rows here. Real public codes are random (see seed.ts). */
   code: string;
   name: string;
   photographerId: string;

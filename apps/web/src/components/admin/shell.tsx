@@ -7,14 +7,70 @@ import { CameraIcon } from "@/components/icons";
 import { api } from "@/lib/api";
 import { Icon, ToastProvider } from "./ui";
 
-const NAV = [
-  { href: "/admin/photographers", label: "Photographers", icon: "photo_camera_front" },
-  { href: "/admin/events", label: "Events", icon: "event_available" },
-  { href: "/admin/usage", label: "Usage", icon: "bar_chart_4_bars" },
-  { href: "/admin/account", label: "Account", icon: "shield_person" },
-];
+export interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  /** Exact match only (for an area's home link, e.g. /dashboard). */
+  exact?: boolean;
+}
+
+export interface ShellConfig {
+  /** aria-label of the sidebar navigation. */
+  area: string;
+  /** Badge under the logo and the role line in the user menu. */
+  roleLabel: string;
+  /** Breadcrumb root in the top bar. */
+  crumb: string;
+  /** Small print at the bottom of the sidebar. */
+  footnote: string;
+  nav: NavItem[];
+  /** First item of the user menu. */
+  account: { href: string; label: string; icon: string };
+}
+
+const ADMIN: ShellConfig = {
+  area: "Admin",
+  roleLabel: "Super Admin",
+  crumb: "Platform Administration",
+  footnote: "Platform administration",
+  nav: [
+    { href: "/admin/photographers", label: "Photographers", icon: "photo_camera_front" },
+    { href: "/admin/events", label: "Events", icon: "event_available" },
+    { href: "/admin/usage", label: "Usage", icon: "bar_chart_4_bars" },
+    { href: "/admin/account", label: "Account", icon: "shield_person" },
+  ],
+  account: { href: "/admin/account", label: "Account", icon: "shield_person" },
+};
 
 export function AdminShell({ userName, children }: { userName: string; children: React.ReactNode }) {
+  return (
+    <AppShell config={ADMIN} userName={userName}>
+      {children}
+    </AppShell>
+  );
+}
+
+const isActive = (item: NavItem, pathname: string) =>
+  item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+/** Sidebar + top bar + user menu shared by the Super Admin and Photographer areas. */
+export function AppShell({
+  config,
+  userName,
+  subtitle,
+  title,
+  children,
+}: {
+  config: ShellConfig;
+  userName: string;
+  /** Second line under the name in the user menu; defaults to the role label. */
+  subtitle?: string;
+  /** Overrides the top-bar title (otherwise the active nav item's label). */
+  title?: string;
+  children: React.ReactNode;
+}) {
+  const NAV = config.nav;
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,7 +97,8 @@ export function AdminShell({ userName, children }: { userName: string; children:
     };
   }, [userMenuOpen]);
 
-  const current = NAV.find((n) => pathname.startsWith(n.href));
+  // Longest matching href wins, so /dashboard/events beats /dashboard.
+  const current = [...NAV].sort((a, b) => b.href.length - a.href.length).find((n) => pathname === n.href || pathname.startsWith(`${n.href}/`));
 
   async function logout() {
     setSigningOut(true);
@@ -54,7 +111,7 @@ export function AdminShell({ userName, children }: { userName: string; children:
   }
 
   const sidebar = (
-    <nav aria-label="Admin" className="flex flex-col gap-6">
+    <nav aria-label={config.area} className="flex flex-col gap-6">
       <div className="flex items-center gap-3 px-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
           <CameraIcon className="h-5 w-5" />
@@ -62,14 +119,14 @@ export function AdminShell({ userName, children }: { userName: string; children:
         <div className="flex flex-col">
           <span className="text-headline-sm font-bold leading-tight tracking-tight text-primary">InstantPhotos</span>
           <span className="w-fit rounded-full bg-secondary-container px-2 py-0.5 text-label-sm font-semibold tracking-wide text-on-secondary-container">
-            Super Admin
+            {config.roleLabel}
           </span>
         </div>
       </div>
       <div className="mx-3 h-px bg-outline" />
       <ul className="flex flex-col gap-1.5 px-1">
         {NAV.map((item) => {
-          const active = pathname.startsWith(item.href);
+          const active = isActive(item, pathname);
           return (
             <li key={item.href}>
               <Link
@@ -97,7 +154,7 @@ export function AdminShell({ userName, children }: { userName: string; children:
         {/* Desktop sidebar */}
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 flex-col justify-between bg-surface-low px-4 py-6 shadow-[1px_0_8px_rgba(0,0,0,0.04)] lg:flex">
           {sidebar}
-          <p className="px-3 text-label-sm text-on-surface-variant">Platform administration</p>
+          <p className="px-3 text-label-sm text-on-surface-variant">{config.footnote}</p>
         </aside>
 
         {/* Mobile drawer */}
@@ -119,9 +176,9 @@ export function AdminShell({ userName, children }: { userName: string; children:
               >
                 <Icon name="menu" className="text-[24px]" />
               </button>
-              <span className="hidden text-label-md text-on-surface-variant sm:inline">Platform Administration</span>
+              <span className="hidden text-label-md text-on-surface-variant sm:inline">{config.crumb}</span>
               <Icon name="chevron_right" className="hidden text-[14px] text-on-surface-variant sm:inline" />
-              <span className="font-serif text-headline-sm font-medium tracking-tight">{current?.label ?? "Overview"}</span>
+              <span className="truncate font-serif text-headline-sm font-medium tracking-tight">{title ?? current?.label ?? "Overview"}</span>
             </div>
             <div ref={userMenuRef} className="relative">
               <button
@@ -134,7 +191,7 @@ export function AdminShell({ userName, children }: { userName: string; children:
               >
                 <div className="hidden flex-col text-right sm:flex">
                   <span className="text-label-md font-semibold leading-tight">{userName}</span>
-                  <span className="text-label-sm font-medium leading-tight text-secondary">Super Admin</span>
+                  <span className="text-label-sm font-medium leading-tight text-secondary">{subtitle ?? config.roleLabel}</span>
                 </div>
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
                   <Icon name="person" className="text-[18px]" />
@@ -152,15 +209,15 @@ export function AdminShell({ userName, children }: { userName: string; children:
                 >
                   <div className="border-b border-outline/60 px-4 py-3 sm:hidden">
                     <p className="text-label-md font-semibold">{userName}</p>
-                    <p className="text-label-sm text-secondary">Super Admin</p>
+                    <p className="text-label-sm text-secondary">{subtitle ?? config.roleLabel}</p>
                   </div>
                   <Link
                     role="menuitem"
-                    href="/admin/account"
+                    href={config.account.href}
                     className="flex items-center gap-2.5 px-4 py-2.5 text-label-md transition-colors hover:bg-surface-container"
                   >
-                    <Icon name="shield_person" className="text-[18px] text-secondary" />
-                    Account
+                    <Icon name={config.account.icon} className="text-[18px] text-secondary" />
+                    {config.account.label}
                   </Link>
                   <button
                     type="button"

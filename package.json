@@ -16,7 +16,8 @@
     "db:generate": "npm run generate -w @instantphotos/db",
     "db:migrate": "npm run migrate -w @instantphotos/db",
     "db:seed": "npm run seed -w @instantphotos/db",
-    "db:create-admin": "npm run create-admin -w @instantphotos/db"
+    "db:create-admin": "npm run create-admin -w @instantphotos/db",
+    "db:add-admin": "tsx --env-file-if-exists=.env.local scripts/add-super-admin.mts"
   },
   "engines": {
     "node": ">=20"

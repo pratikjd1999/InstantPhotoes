@@ -151,12 +151,12 @@ All are listed in **§14 Post-beta roadmap**.
 | ID | Requirement |
 |---|---|
 | UPL-1 | Drag-and-drop and file-picker bulk upload. |
-| UPL-2 | **JPEG only**, max **25 MB** per file. Other files are rejected with a clear message. |
+| UPL-2 | **JPEG only**, max **15 MB** per file. Other files are rejected with a clear message. |
 | UPL-3 | Browser uploads **directly to R2** using presigned URLs (files never pass through the app server). |
 | UPL-4 | Parallel uploads (≈ 4 at a time) with per-file progress and automatic retry. |
 | UPL-5 | Failed files can be retried; re-running a batch skips files already uploaded (same name + size in the event). |
 | UPL-6 | Original filename is preserved and shown (for matching against the photographer's own files). |
-| UPL-7 | Before uploading, the browser sends the batch (filename, size, type) to the app. The app validates it (JPEG, ≤ 25 MB, event ownership), creates one `photos` row per file with status `pending_upload`, and returns one presigned PUT URL per file (valid 15 minutes). |
+| UPL-7 | Before uploading, the browser sends the batch (filename, size, type) to the app. The app validates it (JPEG, ≤ 15 MB, event ownership), creates one `photos` row per file with status `pending_upload`, and returns one presigned PUT URL per file (valid 15 minutes). |
 | UPL-8 | The browser uploads each file directly to R2. R2 returns 200 + ETag on success or an error; the browser retries failed files up to 3 times and then reports them as `upload_failed`. |
 | UPL-8a | After successful uploads, the browser calls the app's complete endpoint with the photo IDs. The app verifies each file with R2 `HeadObject` (exists, size matches) and, in one DB transaction, sets status `uploaded` and inserts a `process_photo` job. |
 | UPL-8b | Cleanup sweep: every 10 minutes the worker checks `pending_upload` rows older than 15 minutes against R2. If the file exists, it is marked `uploaded` and queued; otherwise it is marked `upload_failed`. |
@@ -544,7 +544,7 @@ Next.js receives form → stores selfie in R2 → POST /embed-selfie to worker
 | D13 | Guests see results on the web immediately; WhatsApp after beta | Unofficial WhatsApp automation risks bans; Cloud API cost decision pending |
 | D14 | No automatic deletion in beta; consent checkbox; manual guest delete | Keep data for re-matching; meet DPDP basics |
 | D15 | No usage limits in beta; usage visible to Super Admin | Learn real usage; watch costs |
-| D16 | JPEG only, ≤ 25 MB, drag and drop | Covers beta needs; RAW/HEIC later |
+| D16 | JPEG only, ≤ 15 MB, drag and drop (lowered from 25 MB on 29 Oct 2026) | Covers beta needs; RAW/HEIC later |
 | D17 | Event Organiser role (view all event photos, own login) added **after beta** | Keeps beta focused on the core loop; data model and API designed in §14.1 |
 | D18 | Product name is **InstantPhotoes** | Decided 27 Oct 2026 |
 | D19 | Super Admin and Photographer areas are strictly separated, enforced server-side in both directions | Typing a URL by hand must never expose the other role's pages |
