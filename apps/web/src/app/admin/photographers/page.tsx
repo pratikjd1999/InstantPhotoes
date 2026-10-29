@@ -23,6 +23,7 @@ import {
   labelClass,
   primaryBtn,
   useToast,
+  Tooltip,
 } from "@/components/admin/ui";
 
 type Filter = "all" | "active" | "suspended";
@@ -187,11 +188,20 @@ export default function PhotographersPage() {
                           <span className="flex items-center gap-1.5 text-label-md font-semibold">
                             {p.name}
                             {p.mustChangePassword && (
-                              <Icon name="lock_reset" className="text-[16px] text-secondary" />
+                              <Tooltip
+                                label={
+                                  <>
+                                    <strong className="font-semibold">Temporary password.</strong> {p.name.split(" ")[0]} hasn&apos;t
+                                    signed in and set their own password yet. They&apos;ll be asked to at their next login. If they
+                                    lost it, use <em>Reset password</em> from the row menu.
+                                  </>
+                                }
+                              >
+                                <Icon name="lock_reset" className="text-[16px] text-secondary" />
+                              </Tooltip>
                             )}
                           </span>
                           <span className="text-label-sm font-normal text-on-surface-variant">{p.code}</span>
-                          {p.mustChangePassword && <span className="sr-only">Password change pending</span>}
                         </div>
                       </div>
                     </td>

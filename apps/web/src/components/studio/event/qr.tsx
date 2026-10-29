@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PhotographerEvent } from "@instantphotos/core";
-import { QR_CREDIT_LINE, downloadQrPdf, downloadQrPng, qrDataUrl } from "@/lib/qr-card";
+import { QR_BRAND, QR_CREDIT_PREFIX, downloadQrPdf, downloadQrPng, qrDataUrl } from "@/lib/qr-card";
 import { Alert, Card, Icon, primaryBtn, useToast } from "@/components/admin/ui";
 
 // EVT-2/3: the event QR (encodes {APP_URL}/e/{code}) as a printable card, PNG and PDF.
@@ -56,7 +56,15 @@ export function QrTab({ event, studioName }: { event: PhotographerEvent; studioN
               <div className="h-full w-full animate-pulse rounded-lg bg-surface-container" />
             )}
           </div>
-          <p className="mt-6 text-label-sm text-on-surface-variant">{QR_CREDIT_LINE}</p>
+          <div className="-mx-8 -mb-8 mt-8 flex flex-col items-center gap-2 border-t-4 border-secondary-container bg-gradient-to-br from-primary to-primary-container px-6 py-5 lg:-mx-10 lg:-mb-10">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-secondary-container">{QR_CREDIT_PREFIX}</span>
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface">
+                <Icon name="photo_camera" className="text-[22px] text-primary-container" />
+              </span>
+              <span className="font-serif text-headline-md font-semibold text-white">{QR_BRAND}</span>
+            </span>
+          </div>
         </div>
       </div>
 

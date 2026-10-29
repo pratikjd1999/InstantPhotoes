@@ -25,6 +25,70 @@ export const ghostBtn =
 export const dangerBtn =
   "inline-flex items-center justify-center gap-2 rounded-lg bg-error px-4 py-2.5 text-label-md text-white shadow-sm transition-colors hover:bg-on-error-container disabled:cursor-not-allowed disabled:opacity-50";
 
+// ---------- tooltip ----------
+/**
+ * Explains a small icon. Opens on hover, keyboard focus and tap. Positioned on the viewport (fixed), so it is never
+ * clipped by scrolling tables.
+ */
+export function Tooltip({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  const id = useId();
+  const ref = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; below: boolean } | null>(null);
+
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const below = r.top < 90; // not enough room above: open underneath
+    const left = Math.min(Math.max(r.left + r.width / 2, 150), window.innerWidth - 150);
+    setPos({ top: below ? r.bottom + 8 : r.top - 8, left, below });
+  };
+  const hide = () => setPos(null);
+
+  useEffect(() => {
+    if (!pos) return;
+    const close = () => setPos(null);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [pos]);
+
+  return (
+    <span
+      ref={ref}
+      tabIndex={0}
+      aria-describedby={pos ? id : undefined}
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={hide}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (pos) hide();
+        else show();
+      }}
+      onKeyDown={(e) => e.key === "Escape" && hide()}
+      className="inline-flex cursor-help rounded outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      {children}
+      {pos && (
+        <span
+          id={id}
+          role="tooltip"
+          style={{ top: pos.top, left: pos.left }}
+          className={`pointer-events-none fixed z-[80] w-max max-w-[280px] -translate-x-1/2 whitespace-normal rounded-lg bg-inverse-surface px-3 py-2 text-left text-body-sm font-normal leading-snug text-inverse-on-surface shadow-xl ${
+            pos.below ? "" : "-translate-y-full"
+          }`}
+        >
+          {label}
+        </span>
+      )}
+    </span>
+  );
+}
+
 // ---------- badges ----------
 export function StatusBadge({ tone, children }: { tone: "active" | "suspended" | "archived" | "info"; children: React.ReactNode }) {
   const styles = {

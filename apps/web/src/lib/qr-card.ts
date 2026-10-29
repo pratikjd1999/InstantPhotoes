@@ -5,8 +5,9 @@ import QRCode from "qrcode";
 // Printable QR card (EVT-3): studio name at the top, event name and QR in the middle, the credit line at the bottom.
 // Drawn on a canvas so the PNG and the PDF are the same picture.
 
-/** The credit line under the QR. One editable string (EVT-3), e.g. "Marketed by" / "Backed by". */
-export const QR_CREDIT_LINE = "Powered by InstantPhotos";
+/** The credit line wording (EVT-3), e.g. "Marketed by" / "Backed by". The brand name below it is drawn large. */
+export const QR_CREDIT_PREFIX = "Powered by";
+export const QR_BRAND = "InstantPhotos";
 
 export interface QrCardInput {
   studioName: string;
@@ -17,6 +18,8 @@ export interface QrCardInput {
 // 4 x 6 inch card at 300 dpi.
 const W = 1200;
 const H = 1800;
+/** Height of the brand band at the bottom. */
+const BAND = 290;
 
 const fontVar = (name: string, fallback: string) => {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -35,7 +38,92 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): st
     } else line = test;
   }
   if (line) lines.push(line);
-  return lines.slice(0, 3);
+  if (lines.length <= 3) return lines;
+  // Too long for three lines: end the third with an ellipsis rather than silently dropping words.
+  let last = `${lines[2]} ${lines.slice(3).join(" ")}`;
+  while (last.length > 1 && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1).trimEnd();
+  return [lines[0]!, lines[1]!, `${last}…`];
+}
+
+/** Simple camera mark (same idea as the app logo), drawn so it never depends on an icon font. */
+function drawCamera(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
+  const s = size / 24;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2 * s;
+  ctx.lineJoin = "round";
+  // body with the viewfinder bump on top
+  ctx.beginPath();
+  ctx.moveTo(4 * s, 7 * s);
+  ctx.lineTo(8 * s, 7 * s);
+  ctx.lineTo(9.5 * s, 4.5 * s);
+  ctx.lineTo(14.5 * s, 4.5 * s);
+  ctx.lineTo(16 * s, 7 * s);
+  ctx.lineTo(20 * s, 7 * s);
+  ctx.quadraticCurveTo(22 * s, 7 * s, 22 * s, 9 * s);
+  ctx.lineTo(22 * s, 18 * s);
+  ctx.quadraticCurveTo(22 * s, 20 * s, 20 * s, 20 * s);
+  ctx.lineTo(4 * s, 20 * s);
+  ctx.quadraticCurveTo(2 * s, 20 * s, 2 * s, 18 * s);
+  ctx.lineTo(2 * s, 9 * s);
+  ctx.quadraticCurveTo(2 * s, 7 * s, 4 * s, 7 * s);
+  ctx.closePath();
+  ctx.stroke();
+  // lens
+  ctx.beginPath();
+  ctx.arc(12 * s, 13.25 * s, 3.6 * s, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/** Bottom band: "POWERED BY" and the InstantPhotos mark, large and on wine so the platform stands out. */
+function drawBrandBand(ctx: CanvasRenderingContext2D, serif: string, sans: string) {
+  const top = H - BAND;
+  const bg = ctx.createLinearGradient(0, top, W, H);
+  bg.addColorStop(0, "#3f0818");
+  bg.addColorStop(1, "#5b1e2c");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, top, W, BAND);
+  ctx.fillStyle = "#ecbf80";
+  ctx.fillRect(0, top, W, 8);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ecbf80";
+  ctx.font = `600 32px ${sans}`;
+  ctx.letterSpacing = "8px";
+  ctx.fillText(QR_CREDIT_PREFIX.toUpperCase(), W / 2, top + 84);
+  ctx.letterSpacing = "0px";
+
+  // Logo tile + name, centred as one group.
+  ctx.font = `600 92px ${serif}`;
+  const nameWidth = ctx.measureText(QR_BRAND).width;
+  const tile = 104;
+  const gap = 30;
+  const startX = (W - (tile + gap + nameWidth)) / 2;
+  const tileY = top + 128;
+  ctx.fillStyle = "#fdf9f5";
+  roundRect(ctx, startX, tileY, tile, tile, 22);
+  ctx.fill();
+  drawCamera(ctx, startX + 16, tileY + 14, tile - 32, "#5b1e2c");
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#ffffff";
+  ctx.fillText(QR_BRAND, startX + tile + gap, tileY + tile / 2 + 4);
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "center";
 }
 
 export async function renderQrCard(input: QrCardInput): Promise<HTMLCanvasElement> {
@@ -76,8 +164,9 @@ export async function renderQrCard(input: QrCardInput): Promise<HTMLCanvasElemen
   ctx.font = `italic 400 48px ${serif}`;
   ctx.fillText("Scan to find all photos of you", W / 2, afterTitle + 100);
 
-  const qrSize = 760;
   const qrTop = afterTitle + 170;
+  // Keep the QR large, but always leave room for the link and the brand band (long event names wrap to 3 lines).
+  const qrSize = Math.min(740, H - BAND - 150 - qrTop);
   const qr = document.createElement("canvas");
   await QRCode.toCanvas(qr, input.url, { width: qrSize, margin: 2, errorCorrectionLevel: "M", color: { dark: "#1c1c19", light: "#ffffff" } });
   ctx.fillStyle = "#ffffff";
@@ -88,9 +177,7 @@ export async function renderQrCard(input: QrCardInput): Promise<HTMLCanvasElemen
   ctx.font = `500 34px ${sans}`;
   ctx.fillText(input.url.replace(/^https?:\/\//, ""), W / 2, qrTop + qrSize + 90);
 
-  ctx.fillStyle = "#807474";
-  ctx.font = `500 38px ${sans}`;
-  ctx.fillText(QR_CREDIT_LINE, W / 2, H - 90);
+  drawBrandBand(ctx, serif, sans);
   return canvas;
 }
 
