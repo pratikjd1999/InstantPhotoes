@@ -3,6 +3,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { events, getDb, guestPhotos, jobs, photographerProfiles, photos, user } from "@instantphotos/db";
 import { formatIndianPhone } from "./admin";
 import { MAX_BRANDING_BYTES, MAX_PHOTO_BYTES, appUrl, getStorage } from "./storage";
+import { wakeWorker } from "./worker";
 import {
   DomainError,
   type DashboardSummary,
@@ -499,6 +500,7 @@ export async function completeUploads(userId: string, eventId: string, photoIds:
       await tx.update(photos).set({ status: "upload_failed", failReason: "The file did not arrive in storage." }).where(inArray(photos.id, failed));
     }
   });
+  if (ok.length) await wakeWorker();
   return { uploaded: ok.length, failed };
 }
 
@@ -533,6 +535,7 @@ export async function retryPhoto(userId: string, photoId: string): Promise<void>
     await tx.update(photos).set({ status: "uploaded", failReason: null }).where(eq(photos.id, photoId));
     await tx.insert(jobs).values({ type: "process_photo", payload: { photoId } });
   });
+  await wakeWorker();
 }
 
 /** UPL-9: soft-delete photos together with their faces and guest matches, in one transaction. */

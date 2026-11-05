@@ -556,6 +556,7 @@ Next.js receives form → stores selfie in R2 → POST /embed-selfie to worker
 | D25 | Downloaded QR shows photographer name on top and "Powered by InstantPhotoes" at the bottom | Photographer branding with product credit |
 | D26 | Soft-deleted events and photos **still count** toward storage and usage figures | The files remain in R2 and cost money until a purge exists |
 | D27 | Browser confirms uploads; app verifies with R2 HeadObject and queues jobs; worker sweep recovers stuck uploads | Keeps file bytes off our server while guaranteeing every photo gets a status. R2 event notifications considered for post-beta |
+| D28 | The app calls the worker's `/wake` after queuing jobs; the worker polls the queue every 3 s only while busy and every 30 min when idle (the UPL-8b sweep runs every 10 min while busy, otherwise on the idle poll) | Constant polling would keep Neon awake around the clock and use up its free compute hours. A missed wake only delays processing until the next poll |
 
 ---
 

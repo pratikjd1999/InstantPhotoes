@@ -1,0 +1,15 @@
+# Local development:   docker compose up --build        (reads ../../.env.local)
+# On the server:       WORKER_ENV_FILE=.env docker compose up -d --build
+services:
+  worker:
+    build: .
+    env_file: ${WORKER_ENV_FILE:-../../.env.local}
+    environment:
+      # Used only when the R2_* variables are not set: the same folder the app's local storage driver writes to.
+      LOCAL_STORAGE_DIR: /data/storage
+    volumes:
+      - ../../.local/storage:/data/storage
+    ports:
+      # Only reachable from this machine. On the server the tunnel connects to it locally.
+      - "127.0.0.1:8000:8000"
+    restart: always

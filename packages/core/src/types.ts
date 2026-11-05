@@ -182,7 +182,7 @@ export interface UploadBatchResult {
 export class DomainError extends Error {
   constructor(
     message: string,
-    public status: 400 | 404 | 409 = 400,
+    public status: 400 | 404 | 409 | 503 = 400,
   ) {
     super(message);
     this.name = "DomainError";

@@ -1,0 +1,7 @@
+**/__pycache__
+**/*.pyc
+.venv
+models
+README.md
+docker-compose.yml
+.env*

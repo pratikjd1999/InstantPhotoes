@@ -34,8 +34,8 @@ Source of truth for scope: [PRD.md](PRD.md). Remaining design work: [remaining s
 | Phase 0: Setup | `[~]` Monorepo + web app scaffolded; Neon, R2, VM, Tunnel, Sentry, CI not started |
 | Phase 1: Auth and admin | `[x]` Landing page, Better Auth login in Postgres, role guards, all admin pages and the first-login password change, on the Neon dev database |
 | Phase 2: Profile and events | `[x]` Photographer area P01–P06 built from Stitch: dashboard, events, create, event page (gallery, upload, guests, QR PNG/PDF, settings), profile and branding |
-| Phase 3: Upload and processing | `[~]` Upload done (presigned URLs, verify, queue jobs); R2 bucket, face worker and cleanup sweep not started |
-| Phase 4: Face indexing and guest flow | `[ ]` |
+| Phase 3: Upload and processing | `[~]` Upload, R2 (dev + prod buckets) and the face worker (web copy, thumbnail, jobs, sweep) done and tested locally; worker not deployed yet |
+| Phase 4: Face indexing and guest flow | `[~]` Worker side done (faces, embeddings, matching both ways, `/embed-selfie`); guest pages not started |
 | Phase 5: Gallery | `[ ]` |
 | Phase 6: Beta hardening | `[ ]` |
 | Beta rollout (real events) | `[ ]` |
@@ -98,7 +98,7 @@ Full detail and order of work in [remaining screen.txt](remaining%20screen.txt).
 - [x] Database schema (Drizzle, PRD §8) in `packages/db`: Better Auth tables + photographer_profiles, events, photos, faces (vector 128), guests, guest_photos, guest_sessions, jobs. Migration, dummy-data seed and local Postgres script done (`npm run db:local:start`, `db:migrate`, `db:seed`)
 - [x] Neon Postgres + pgvector: personal dev database migrated and seeded (a production database comes at deploy time)
 - [x] `packages/core` and the API now read and write the database; the in-memory mock is deleted
-- [ ] Cloudflare R2 bucket (private)
+- [x] Cloudflare R2 buckets (private): `instantphotos-dev` and `instantphotos-prod`, CORS for localhost and instantphotos.in
 - [ ] Oracle VM + Docker for worker
 - [ ] Cloudflare Tunnel + shared secret
 - [ ] Sentry
@@ -136,17 +136,17 @@ Full detail and order of work in [remaining screen.txt](remaining%20screen.txt).
 - [ ] Batch validation + presigned URLs (UPL-7)
 - [ ] Direct-to-R2 upload with parallelism, retry, progress (UPL-1 to UPL-6, UPL-8)
 - [ ] Upload complete endpoint with `HeadObject` check and job insert (UPL-8a)
-- [ ] Cleanup sweep for stuck uploads (UPL-8b)
+- [x] Cleanup sweep for stuck uploads (UPL-8b), plus recovery of jobs left running by a stopped worker
 - [ ] Per-photo status UI + Retry (UPL-8c)
-- [ ] Jobs queue (`SKIP LOCKED`)
-- [ ] Worker: EXIF rotation, web copy, thumbnail, strip GPS (PRC-1, PRC-2)
+- [x] Jobs queue (`SKIP LOCKED`), 3 attempts with backoff, unreadable files fail at once, app wakes the worker after uploads (D28)
+- [x] Worker: EXIF rotation, web copy (2048 px, ~500 KB), thumbnail (400 px, ~30 KB), EXIF/GPS stripped, capture time read (PRC-1, PRC-2)
 - [ ] Photo soft delete (UPL-9)
 
 ### Phase 4: Face indexing and guest flow
 **Done when:** a guest submits a selfie and gets correct matches in under 5 s.
-- [ ] Face detection (YuNet) + embeddings (SFace) stored in pgvector (PRC-3, PRC-4)
-- [ ] Match new faces against registered guests (PRC-5, PRC-6)
-- [ ] `/embed-selfie` endpoint on worker
+- [x] Face detection (YuNet) + embeddings (SFace) stored in pgvector (PRC-3, PRC-4)
+- [x] Match new faces against registered guests (PRC-5, PRC-6)
+- [x] `/embed-selfie` endpoint on worker, with one-face / too-small / no-face checks; app side in `packages/core/src/worker.ts` (`embedSelfie`, `matchGuest`)
 - [ ] Guest event page and form (GST-1, GST-2, GST-3)
 - [ ] Selfie validation: exactly one face (GST-4)
 - [ ] Selfie stored; match against existing faces (GST-5, GST-6)
@@ -201,6 +201,7 @@ Targets from PRD §1.4. Fill in the actuals as events happen.
 
 | Date | Update |
 |---|---|
+| 3 Nov 2026 | Face worker built (`apps/worker`, Python + Docker): job loop, web copy + thumbnail, YuNet/SFace faces and embeddings, matching new photos to guests, `/embed-selfie`, `/wake`, stuck-upload sweep. App wakes it after uploads; `embedSelfie` and `matchGuest` ready for the guest pages. Tested end to end against dev Neon and dev R2 (26 checks). Not deployed yet. |
 | 29 Oct 2026 | Photographer area (P01–P06) built and tested in Chrome: dashboard, events, create event, event workspace with gallery / upload / guests / QR / settings tabs, profile and branding, first-login password. Upload flow with presigned URLs (R2 when configured, local folder in dev). No schema change; seed now gives events random public codes and optional photographer passwords. |
 | 29 Oct 2026 | Admin area runs on the database: Better Auth (login, sessions, change password in Postgres), core services as SQL, rate limit table, role guards checked against the database, Neon dev database migrated and seeded. Config-file login removed. Tested with curl and a real browser. |
 | 28 Oct 2026 | Added the database: full Drizzle schema, first migration (enables pgvector), seed with the same dummy data as the mock (7 photographers, 13 events, 35,510 photos, 3,815 guests), local Postgres script. Seeded totals checked against the old mock: identical. Admin pages still read the mock. |
