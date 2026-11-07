@@ -1,6 +1,11 @@
 import { Hono, type Context, type Next } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import {
   DomainError,
+  GUEST_SESSION_COOKIE,
+  MAX_SELFIE_BYTES,
+  RECLAIM_RATE_LIMIT,
+  REGISTER_RATE_LIMIT,
   clearLoginFailures,
   MAX_PHOTO_BYTES,
   brandingUploadUrl,
@@ -19,7 +24,10 @@ import {
   getProfile,
   getStorage,
   getUsage,
+  galleryDownloadList,
+  galleryPage,
   guestMatchedPhotos,
+  hideGuestPhoto,
   homeForRole,
   listEventGuests,
   listEvents,
@@ -32,8 +40,11 @@ import {
   passwordProblem,
   pingDatabase,
   rateLimitStatus,
+  reclaimGallery,
   recordLoginFailure,
+  registerGuest,
   reportUploadFailures,
+  requireGalleryGuest,
   resetPhotographerPassword,
   retryPhoto,
   revokeUserSessions,
@@ -46,6 +57,7 @@ import {
   verifyLocalSignature,
   type AuthUser,
   type BrandingKind,
+  type GuestSessionTicket,
   type PhotoFilter,
 } from "@instantphotos/core";
 import { auth } from "./auth";
@@ -63,6 +75,7 @@ async function readBody(c: Context): Promise<Record<string, unknown>> {
   }
 }
 const str = (v: unknown) => (typeof v === "string" ? v : "");
+const clientIp = (c: Context) => c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "local";
 
 /**
  * True for a Better Auth "request rejected" error (wrong password, unknown email, ...), as opposed to a crash.
@@ -115,7 +128,7 @@ api.get("/health", async (c) => {
 // ---- auth ----
 api.post("/auth/login", async (c) => {
   const body = await readBody(c);
-  const key = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const key = clientIp(c);
 
   const limit = await rateLimitStatus(key);
   if (limit.blocked) {
@@ -322,6 +335,76 @@ studio.post("/events/:id/originals/download-urls", async (c) => {
 });
 
 api.route("/", studio);
+
+// ---- guests (public: access is the gallery token plus the guest_session cookie, PRD §5.7, §5.8, §12) ----
+function setGuestCookie(c: Context, ticket: GuestSessionTicket) {
+  // SameSite=Lax so the cookie is sent when the gallery link is opened from WhatsApp (D12).
+  setCookie(c, GUEST_SESSION_COOKIE, ticket.value, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+    path: "/",
+    expires: ticket.expiresAt,
+  });
+}
+const tooMany = (c: Context, retryAfterSeconds: number) => {
+  c.header("Retry-After", String(retryAfterSeconds));
+  return c.json({ error: "Too many attempts. Please try again in a few minutes.", code: "rate_limited" }, 429);
+};
+
+api.post("/public/events/:code/guests", async (c) => {
+  const ip = clientIp(c);
+  const key = `guest-register:${ip}`;
+  const limit = await rateLimitStatus(key, REGISTER_RATE_LIMIT);
+  if (limit.blocked) return tooMany(c, limit.retryAfterSeconds);
+  await recordLoginFailure(key, REGISTER_RATE_LIMIT);
+
+  const form = await c.req.parseBody().catch(() => ({}) as Record<string, unknown>);
+  const file = form.selfie;
+  if (file instanceof File && file.size > MAX_SELFIE_BYTES) return c.json({ error: "That photo is too large. Please take the selfie again." }, 400);
+  const result = await registerGuest(c.req.param("code"), {
+    name: str(form.name),
+    phone: str(form.phone),
+    consent: form.consent === "true",
+    selfie: file instanceof File ? new Uint8Array(await file.arrayBuffer()) : null,
+    ip,
+    userAgent: c.req.header("user-agent"),
+  });
+  if (!result.ok) return c.json({ error: result.message, code: result.code }, 422);
+  setGuestCookie(c, result.session);
+  return c.json({ redirect: `/g/${result.token}`, matched: result.matched });
+});
+
+const galleryGuest = (c: Context) => requireGalleryGuest(c.req.param("token") ?? "", getCookie(c, GUEST_SESSION_COOKIE));
+
+api.get("/public/gallery/:token/photos", async (c) => {
+  c.header("Cache-Control", "no-store");
+  const guestId = await galleryGuest(c);
+  return c.json(await galleryPage(guestId, Math.max(1, Number(c.req.query("page")) || 1)));
+});
+api.get("/public/gallery/:token/download-all", async (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json(await galleryDownloadList(await galleryGuest(c)));
+});
+api.post("/public/gallery/:token/hide/:photoId", async (c) => {
+  await hideGuestPhoto(await galleryGuest(c), c.req.param("photoId"));
+  return c.json({ ok: true });
+});
+api.post("/public/gallery/:token/reclaim", async (c) => {
+  const token = c.req.param("token");
+  const key = `guest-reclaim:${token.slice(0, 64)}`;
+  const limit = await rateLimitStatus(key, RECLAIM_RATE_LIMIT);
+  if (limit.blocked) return tooMany(c, limit.retryAfterSeconds);
+  const b = await readBody(c);
+  const ticket = await reclaimGallery(token, str(b.phone), clientIp(c), c.req.header("user-agent"));
+  if (!ticket) {
+    await recordLoginFailure(key, RECLAIM_RATE_LIMIT);
+    return c.json({ error: "That number doesn't match this gallery. Check the number and try again.", code: "mismatch" }, 400);
+  }
+  await clearLoginFailures(key);
+  setGuestCookie(c, ticket);
+  return c.json({ ok: true });
+});
 
 // ---- local file storage (development only; R2 replaces this when configured) ----
 // Access is granted by the signed URL itself, exactly like an R2 presigned URL, so no session is needed here.

@@ -19,6 +19,8 @@ export interface Storage {
   presignGet(key: string, ttlSeconds: number, downloadName?: string): Promise<string>;
   /** Size of the stored object, or null if it does not exist. */
   head(key: string): Promise<{ size: number } | null>;
+  /** Server-side write, for small files only (guest selfies). Photos always go browser → storage directly. */
+  put(key: string, data: Uint8Array, contentType: string): Promise<void>;
 }
 
 export const MAX_PHOTO_BYTES = 15 * 1024 * 1024;
@@ -66,6 +68,13 @@ function r2Storage(): Storage {
       if (!res.ok) throw new Error(`R2 HEAD ${key} failed: ${res.status}`);
       return { size: Number(res.headers.get("content-length") ?? 0) };
     },
+    async put(key, data, contentType) {
+      // Sign first, then send the bytes ourselves: aws4fetch's own fetch turns the body into a stream, which R2 rejects (411).
+      const body = data as Uint8Array<ArrayBuffer>;
+      const signed = await client.sign(objectUrl(key), { method: "PUT", body, headers: { "content-type": contentType } });
+      const res = await fetch(signed.url, { method: "PUT", headers: signed.headers, body });
+      if (!res.ok) throw new Error(`R2 PUT ${key} failed: ${res.status}`);
+    },
   };
 }
 
@@ -109,6 +118,7 @@ function localStorage(): Storage {
         return null;
       }
     },
+    put: (key, data) => localWrite(key, data),
   };
 }
 

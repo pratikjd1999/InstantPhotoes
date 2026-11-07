@@ -62,15 +62,18 @@ export async function clearMustChangePassword(userId: string): Promise<void> {
 }
 
 // ---- login rate limit (AUTH-8): failures per client key inside a time window ----
-export async function rateLimitStatus(key: string): Promise<{ blocked: boolean; retryAfterSeconds: number }> {
+export type RateLimit = { maxFailures: number; windowSeconds: number };
+
+export async function rateLimitStatus(key: string, limit: RateLimit = LOGIN_RATE_LIMIT): Promise<{ blocked: boolean; retryAfterSeconds: number }> {
   const [row] = await getDb().select().from(loginAttempts).where(eq(loginAttempts.key, key));
   if (!row || row.resetAt.getTime() < Date.now()) return { blocked: false, retryAfterSeconds: 0 };
-  const blocked = row.count >= LOGIN_RATE_LIMIT.maxFailures;
+  const blocked = row.count >= limit.maxFailures;
   return { blocked, retryAfterSeconds: blocked ? Math.ceil((row.resetAt.getTime() - Date.now()) / 1000) : 0 };
 }
 
-export async function recordLoginFailure(key: string): Promise<void> {
-  const resetAt = new Date(Date.now() + LOGIN_RATE_LIMIT.windowSeconds * 1000);
+/** Counts one attempt against `key`. The same table also limits guest registration and gallery reclaim (PRD §12). */
+export async function recordLoginFailure(key: string, limit: RateLimit = LOGIN_RATE_LIMIT): Promise<void> {
+  const resetAt = new Date(Date.now() + limit.windowSeconds * 1000);
   await getDb()
     .insert(loginAttempts)
     .values({ key, count: 1, resetAt })

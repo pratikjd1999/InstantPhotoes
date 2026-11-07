@@ -10,7 +10,7 @@ interface DownloadUrls {
 }
 
 /** Keeps file names unique inside the zip: IMG_1.jpg, IMG_1 (2).jpg, ... */
-function uniqueNames(names: string[]) {
+export function uniqueNames(names: string[]) {
   const seen = new Map<string, number>();
   return names.map((n) => {
     const count = seen.get(n) ?? 0;

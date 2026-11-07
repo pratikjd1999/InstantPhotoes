@@ -2,6 +2,7 @@
 export * from "./types";
 export * from "./admin";
 export * from "./auth";
+export * from "./guest";
 export * from "./photographer";
 export * from "./storage";
 export * from "./worker";

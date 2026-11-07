@@ -9,6 +9,8 @@ loadEnvConfig(path.resolve(__dirname, "../.."), process.env.NODE_ENV !== "produc
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@instantphotos/core", "@instantphotos/db"],
+  // Development only: lets a phone on the same Wi-Fi open the dev server (guest pages are mobile first).
+  allowedDevOrigins: ["192.168.1.11"],
 };
 
 export default nextConfig;

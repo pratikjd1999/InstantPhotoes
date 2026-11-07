@@ -179,10 +179,51 @@ export interface UploadBatchResult {
   rejected: { name: string; reason: string }[];
 }
 
+// ---- guest area (PRD §5.7, §5.8) ----
+
+/** The photographer's branding, shown on every guest page instead of ours. */
+export interface StudioBranding {
+  studioName: string;
+  logoUrl: string | null;
+  brandImageUrl: string | null;
+  phone: string;
+  instagram: string;
+  website: string;
+}
+
+/** open: taking registrations. closed: archived (GST-8), existing galleries still open. expired: past gallery_expires_at (GAL-3). */
+export type GuestEventState = "open" | "closed" | "expired";
+
+export interface PublicEvent {
+  id: string;
+  code: string;
+  name: string;
+  eventDate: string;
+  venue: string;
+  galleryExpiresAt: string;
+  state: GuestEventState;
+  studio: StudioBranding;
+}
+
+export interface GuestPhoto {
+  id: string;
+  thumbUrl: string;
+  webUrl: string;
+  /** Same web copy, served as an attachment so the browser saves it (GAL-6). */
+  downloadUrl: string;
+}
+
+export interface GuestGalleryPage {
+  photos: GuestPhoto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export class DomainError extends Error {
   constructor(
     message: string,
-    public status: 400 | 404 | 409 | 503 = 400,
+    public status: 400 | 401 | 404 | 409 | 410 | 503 = 400,
   ) {
     super(message);
     this.name = "DomainError";

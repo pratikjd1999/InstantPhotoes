@@ -30,13 +30,13 @@ Source of truth for scope: [PRD.md](PRD.md). Remaining design work: [remaining s
 | Track | Status |
 |---|---|
 | Product definition (PRD) | `[x]` Draft v1.1 done; open questions remain |
-| UI design (Stitch) | `[~]` Admin and photographer screens mostly done, guest screens not done |
+| UI design (Stitch) | `[x]` Admin, photographer and guest screens (G01, G03–G07) done. G02 (in-app camera) dropped: the phone's own camera is used |
 | Phase 0: Setup | `[~]` Monorepo + web app scaffolded; Neon, R2, VM, Tunnel, Sentry, CI not started |
 | Phase 1: Auth and admin | `[x]` Landing page, Better Auth login in Postgres, role guards, all admin pages and the first-login password change, on the Neon dev database |
 | Phase 2: Profile and events | `[x]` Photographer area P01–P06 built from Stitch: dashboard, events, create, event page (gallery, upload, guests, QR PNG/PDF, settings), profile and branding |
 | Phase 3: Upload and processing | `[~]` Upload, R2 (dev + prod buckets) and the face worker (web copy, thumbnail, jobs, sweep) done and tested locally; worker not deployed yet |
-| Phase 4: Face indexing and guest flow | `[~]` Worker side done (faces, embeddings, matching both ways, `/embed-selfie`); guest pages not started |
-| Phase 5: Gallery | `[ ]` |
+| Phase 4: Face indexing and guest flow | `[x]` Worker side and guest pages done (registration, selfie check, matching, session cookie); tested locally. Under 5 s still to confirm on the deployed setup |
+| Phase 5: Gallery | `[~]` Guest gallery, viewer, download-all, Not me, reclaim and closed states built and tested in Chrome; real iPhone/Android check pending |
 | Phase 6: Beta hardening | `[ ]` |
 | Beta rollout (real events) | `[ ]` |
 
@@ -76,11 +76,13 @@ Full detail and order of work in [remaining screen.txt](remaining%20screen.txt).
 - [x] View event (verify it covers upload, statuses, guests, QR, settings)
 - [~] Photo gallery (unclear if guest or photographer)
 
+- [x] Guest registration `/e/[code]` (G01), finding photos (G03)
+- [x] Guest gallery `/g/[token]` (G04) + viewer (G05) + download-all
+- [x] Guest reclaim, phone number entry (G06)
+- [x] Guest closed states: expired / event closed / not found / matching unavailable (G07)
+- [-] Selfie camera G02: not built (over-designed); `<input capture="user">` opens the phone's own front camera
+
 **Not designed**
-- [ ] Guest registration `/e/[code]` (mobile)
-- [ ] Guest gallery `/g/[token]` + viewer + download-all (mobile)
-- [ ] Guest reclaim (phone number entry)
-- [ ] Guest closed states (expired / event closed)
 - [ ] Change password
 - [ ] Error pages (404, no access, session expired)
 - [ ] Photographer profile and branding
@@ -147,26 +149,26 @@ Full detail and order of work in [remaining screen.txt](remaining%20screen.txt).
 - [x] Face detection (YuNet) + embeddings (SFace) stored in pgvector (PRC-3, PRC-4)
 - [x] Match new faces against registered guests (PRC-5, PRC-6)
 - [x] `/embed-selfie` endpoint on worker, with one-face / too-small / no-face checks; app side in `packages/core/src/worker.ts` (`embedSelfie`, `matchGuest`)
-- [ ] Guest event page and form (GST-1, GST-2, GST-3)
-- [ ] Selfie validation: exactly one face (GST-4)
-- [ ] Selfie stored; match against existing faces (GST-5, GST-6)
-- [ ] Re-registration by same phone (GST-7)
-- [ ] Reject when archived / expired (GST-8)
-- [ ] Guest session cookie + redirect (GST-9)
+- [x] Guest event page and form (GST-1, GST-2, GST-3)
+- [x] Selfie validation: exactly one face (GST-4)
+- [x] Selfie stored; match against existing faces (GST-5, GST-6). Locally 3–7 s, mostly laptop-to-Neon/R2 latency; confirm < 5 s once deployed
+- [x] Re-registration by same phone keeps the link; "Not me" photos stay hidden (GST-7)
+- [x] Reject when archived / expired (GST-8)
+- [x] Guest session cookie + redirect (GST-9)
 - [ ] Photographer: guests list and per-guest photos (PHG-1, PHG-2)
 
 ### Phase 5: Gallery
 **Done when:** a guest can browse and download their photos on mobile.
-- [ ] Gallery access check: token + cookie (GAL-1)
-- [ ] Reclaim by phone number (GAL-2)
-- [ ] Expiry message (GAL-3)
-- [ ] Grid sorted by capture time, infinite scroll (GAL-4)
-- [ ] Full-screen viewer with swipe (GAL-5)
-- [ ] Download single and download-all zip (GAL-6, GAL-7)
-- [ ] "Not me" (GAL-8)
-- [ ] Empty state (GAL-9)
-- [ ] Signed URLs, 1 hour (GAL-10)
-- [ ] Works on Chrome (Android) and Safari (iOS) (GAL-11)
+- [x] Gallery access check: token + cookie (GAL-1)
+- [x] Reclaim by phone number, 5 wrong tries per 15 min per link (GAL-2)
+- [x] Expiry message (GAL-3)
+- [x] Grid sorted by capture time, infinite scroll (GAL-4); new matches offered while the page is open
+- [x] Full-screen viewer with swipe (GAL-5)
+- [x] Download single and download-all zip (GAL-6, GAL-7)
+- [x] "Not me" (GAL-8)
+- [x] Empty state (GAL-9)
+- [x] Signed URLs, 1 hour, refreshed when they run out (GAL-10)
+- [~] Works on Chrome (Android) and Safari (iOS) (GAL-11): tested in desktop Chrome at phone size; check on real phones
 - [ ] Photographer originals download (PHG-3, PHG-4)
 
 ### Phase 6: Beta hardening
@@ -177,7 +179,7 @@ Full detail and order of work in [remaining screen.txt](remaining%20screen.txt).
 - [ ] Admin usage view, including soft-deleted data (ADM-6)
 - [ ] Guest deletion for DPDP (ADM-7)
 - [ ] Monitoring and alerts (Sentry, job failures visible)
-- [ ] Rate limits on guest registration and reclaim
+- [x] Rate limits on guest registration (60 per 15 min per IP, loose because venues share IPs) and reclaim
 - [ ] Rehearsal event
 
 ---
@@ -201,6 +203,7 @@ Targets from PRD §1.4. Fill in the actuals as events happen.
 
 | Date | Update |
 |---|---|
+| 5 Nov 2026 | Guest pages built from Stitch (G01, G03–G07; G02 dropped): `/e/[code]` registration with the phone's camera, selfie check, matching and session cookie; `/g/[token]` gallery with infinite scroll, viewer, Not me, download-all zip, phone re-entry and closed/expired states. Core in `packages/core/src/guest.ts`, API under `/api/public/*`. Selfie written by the server to `events/{eventId}/selfies/{guestId}.jpg`. Tested in Chrome against dev Neon, dev R2 and the local worker (30 checks); test data removed. |
 | 3 Nov 2026 | Face worker built (`apps/worker`, Python + Docker): job loop, web copy + thumbnail, YuNet/SFace faces and embeddings, matching new photos to guests, `/embed-selfie`, `/wake`, stuck-upload sweep. App wakes it after uploads; `embedSelfie` and `matchGuest` ready for the guest pages. Tested end to end against dev Neon and dev R2 (26 checks). Not deployed yet. |
 | 29 Oct 2026 | Photographer area (P01–P06) built and tested in Chrome: dashboard, events, create event, event workspace with gallery / upload / guests / QR / settings tabs, profile and branding, first-login password. Upload flow with presigned URLs (R2 when configured, local folder in dev). No schema change; seed now gives events random public codes and optional photographer passwords. |
 | 29 Oct 2026 | Admin area runs on the database: Better Auth (login, sessions, change password in Postgres), core services as SQL, rate limit table, role guards checked against the database, Neon dev database migrated and seeded. Config-file login removed. Tested with curl and a real browser. |
