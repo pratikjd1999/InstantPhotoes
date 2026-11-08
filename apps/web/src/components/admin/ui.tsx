@@ -226,20 +226,22 @@ export function Alert({ tone, children }: { tone: "error" | "success" | "info"; 
 // ---------- stat card (Usage page, photographer dashboard) ----------
 export function StatCard({ label, icon, value, note, suffix }: { label: string; icon: string; value: string | null; note?: string; suffix?: string }) {
   return (
-    <div className="rounded-xl bg-surface-lowest p-5 shadow-sm ring-1 ring-outline/60">
-      <div className="flex items-center justify-between">
+    <div className="relative overflow-hidden rounded-xl bg-surface-lowest p-5 shadow-sm ring-1 ring-outline/60">
+      {/* Same tinted corner as the admin Photographers tiles. */}
+      <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-secondary-container/40" />
+      <div className="relative flex items-center justify-between">
         <span className="text-label-sm font-semibold uppercase tracking-wider text-on-surface-variant">{label}</span>
         <Icon name={icon} className="text-[20px] text-secondary" />
       </div>
       {value === null ? (
-        <div className="mt-3 h-8 w-24 animate-pulse rounded bg-surface-container" />
+        <div className="relative mt-3 h-8 w-24 animate-pulse rounded bg-surface-container" />
       ) : (
-        <p className="mt-2 font-serif text-headline-md font-semibold tracking-tight text-primary">
+        <p className="relative mt-2 font-serif text-headline-md font-semibold tracking-tight text-primary">
           {value}
           {suffix && <span className="ml-1.5 font-serif text-headline-sm font-normal text-on-surface-variant">{suffix}</span>}
         </p>
       )}
-      {note && <p className="mt-1 text-body-sm text-on-surface-variant">{note}</p>}
+      {note && <p className="relative mt-1 text-body-sm text-on-surface-variant">{note}</p>}
     </div>
   );
 }

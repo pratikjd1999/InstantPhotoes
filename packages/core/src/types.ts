@@ -184,6 +184,8 @@ export interface UploadBatchResult {
 /** The photographer's branding, shown on every guest page instead of ours. */
 export interface StudioBranding {
   studioName: string;
+  /** The photographer's own name, shown in the profile sheet on guest pages. */
+  displayName: string;
   logoUrl: string | null;
   brandImageUrl: string | null;
   phone: string;

@@ -1,5 +1,6 @@
 import type { StudioBranding } from "@instantphotos/core";
 import { Icon } from "@/components/admin/ui";
+import { StudioProfileButton } from "./profile";
 
 // Guest pages carry the photographer's branding, not ours (PRD §5.7 GST-1). Ours is only the small footer line.
 
@@ -28,15 +29,18 @@ export function StudioMark({ studio, size = "md" }: { studio: StudioBranding; si
   );
 }
 
-/** G01/G04 header: logo and studio name on the left. */
-export function StudioHeader({ studio }: { studio: StudioBranding }) {
+/** G01/G04 header: logo and studio name on the left, the photographer's profile on the right. */
+export function StudioHeader({ studio, profile = true }: { studio: StudioBranding; profile?: boolean }) {
   return (
-    <header className="flex items-center gap-2.5 py-3">
-      <StudioMark studio={studio} />
-      <div className="flex min-w-0 flex-col">
-        <span className="text-[10px] font-semibold uppercase leading-none tracking-widest text-secondary">Photographer</span>
-        <span className="truncate text-body-sm font-semibold text-on-surface">{studio.studioName}</span>
+    <header className="flex items-center justify-between gap-3 py-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <StudioMark studio={studio} />
+        <div className="flex min-w-0 flex-col">
+          <span className="text-[10px] font-semibold uppercase leading-none tracking-widest text-secondary">Photographer</span>
+          <span className="truncate text-body-sm font-semibold text-on-surface">{studio.studioName}</span>
+        </div>
       </div>
+      {profile && <StudioProfileButton studio={studio} />}
     </header>
   );
 }
@@ -54,13 +58,37 @@ const instagramUrl = (handle: string) => `https://instagram.com/${handle.replace
 const telUrl = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
 /** Phone, Instagram and website of the photographer, whichever they filled in. */
-export function ContactCard({ studio, title = "Your photographer" }: { studio: StudioBranding; title?: string }) {
-  const links = [
+export const contactLinks = (studio: StudioBranding) =>
+  [
     studio.phone && { href: telUrl(studio.phone), icon: "call", label: studio.phone, action: "Call" },
     studio.instagram && { href: instagramUrl(studio.instagram), icon: "photo_camera", label: `@${studio.instagram.replace(/^@/, "")}`, action: "Instagram" },
     studio.website && { href: studio.website, icon: "public", label: studio.website.replace(/^https?:\/\//, ""), action: "Website" },
   ].filter(Boolean) as { href: string; icon: string; label: string; action: string }[];
-  if (!links.length) return null;
+
+export function ContactLinks({ studio }: { studio: StudioBranding }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {contactLinks(studio).map((l) => (
+        <a
+          key={l.action}
+          href={l.href}
+          target={l.href.startsWith("tel:") ? undefined : "_blank"}
+          rel="noreferrer"
+          className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-surface-lowest px-3 transition-colors hover:bg-surface-low"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <Icon name={l.icon} className="text-[20px] text-secondary" />
+            <span className="truncate text-label-md font-semibold text-on-surface">{l.label}</span>
+          </span>
+          <span className="shrink-0 text-label-sm font-semibold text-secondary">{l.action}</span>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+export function ContactCard({ studio, title = "Your photographer" }: { studio: StudioBranding; title?: string }) {
+  if (!contactLinks(studio).length) return null;
   return (
     <div className="w-full rounded-xl bg-surface-container p-4 text-left">
       <div className="mb-3 flex items-center gap-3">
@@ -70,23 +98,7 @@ export function ContactCard({ studio, title = "Your photographer" }: { studio: S
           <p className="truncate text-label-md font-semibold text-on-surface">{studio.studioName}</p>
         </div>
       </div>
-      <div className="flex flex-col gap-2">
-        {links.map((l) => (
-          <a
-            key={l.action}
-            href={l.href}
-            target={l.href.startsWith("tel:") ? undefined : "_blank"}
-            rel="noreferrer"
-            className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-surface-lowest px-3 transition-colors hover:bg-surface-low"
-          >
-            <span className="flex min-w-0 items-center gap-3">
-              <Icon name={l.icon} className="text-[20px] text-secondary" />
-              <span className="truncate text-label-md font-semibold text-on-surface">{l.label}</span>
-            </span>
-            <span className="shrink-0 text-label-sm font-semibold text-secondary">{l.action}</span>
-          </a>
-        ))}
-      </div>
+      <ContactLinks studio={studio} />
     </div>
   );
 }

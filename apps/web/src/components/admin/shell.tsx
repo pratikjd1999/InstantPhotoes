@@ -27,6 +27,8 @@ export interface ShellConfig {
   nav: NavItem[];
   /** First item of the user menu. */
   account: { href: string; label: string; icon: string };
+  /** Burgundy top bar, so an admin session is obvious at a glance. */
+  brandBar?: boolean;
 }
 
 const ADMIN: ShellConfig = {
@@ -41,6 +43,7 @@ const ADMIN: ShellConfig = {
     { href: "/admin/account", label: "Account", icon: "shield_person" },
   ],
   account: { href: "/admin/account", label: "Account", icon: "shield_person" },
+  brandBar: true,
 };
 
 export function AdminShell({ userName, children }: { userName: string; children: React.ReactNode }) {
@@ -110,6 +113,10 @@ export function AppShell({
     }
   }
 
+  const bar = config.brandBar
+    ? { header: "bg-primary text-white", muted: "text-white/70", hover: "hover:bg-white/10", role: "text-secondary-container", avatar: "bg-white/15" }
+    : { header: "bg-surface/85 backdrop-blur-xl", muted: "text-on-surface-variant", hover: "hover:bg-surface-high", role: "text-secondary", avatar: "bg-primary" };
+
   const sidebar = (
     <nav aria-label={config.area} className="flex flex-col gap-6">
       <div className="flex items-center gap-3 px-3">
@@ -166,18 +173,18 @@ export function AppShell({
         )}
 
         <div className="lg:pl-72">
-          <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between bg-surface/85 px-4 shadow-[0_1px_8px_rgba(0,0,0,0.04)] backdrop-blur-xl sm:px-8 lg:left-72">
+          <header className={`fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between px-4 shadow-[0_1px_8px_rgba(0,0,0,0.04)] sm:px-8 lg:left-72 ${bar.header}`}>
             <div className="flex items-center gap-3">
               <button
                 type="button"
                 onClick={() => setMenuOpen(true)}
                 aria-label="Open menu"
-                className="rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-high lg:hidden"
+                className={`rounded-lg p-1.5 lg:hidden ${bar.muted} ${bar.hover}`}
               >
                 <Icon name="menu" className="text-[24px]" />
               </button>
-              <span className="hidden text-label-md text-on-surface-variant sm:inline">{config.crumb}</span>
-              <Icon name="chevron_right" className="hidden text-[14px] text-on-surface-variant sm:inline" />
+              <span className={`hidden text-label-md sm:inline ${bar.muted}`}>{config.crumb}</span>
+              <Icon name="chevron_right" className={`hidden text-[14px] sm:inline ${bar.muted}`} />
               <span className="truncate font-serif text-headline-sm font-medium tracking-tight">{title ?? current?.label ?? "Overview"}</span>
             </div>
             <div ref={userMenuRef} className="relative">
@@ -187,18 +194,18 @@ export function AppShell({
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
                 aria-label={`Account menu for ${userName}`}
-                className="flex items-center gap-3 rounded-xl py-1 pl-2 pr-2 transition-colors hover:bg-surface-high focus-visible:ring-2 focus-visible:ring-primary"
+                className={`flex items-center gap-3 rounded-xl py-1 pl-2 pr-2 transition-colors focus-visible:ring-2 focus-visible:ring-primary ${bar.hover}`}
               >
                 <div className="hidden flex-col text-right sm:flex">
                   <span className="text-label-md font-semibold leading-tight">{userName}</span>
-                  <span className="text-label-sm font-medium leading-tight text-secondary">{subtitle ?? config.roleLabel}</span>
+                  <span className={`text-label-sm font-medium leading-tight ${bar.role}`}>{subtitle ?? config.roleLabel}</span>
                 </div>
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-white ${bar.avatar}`}>
                   <Icon name="person" className="text-[18px]" />
                 </div>
                 <Icon
                   name="expand_more"
-                  className={`text-[20px] text-on-surface-variant transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
+                  className={`text-[20px] transition-transform ${bar.muted} ${userMenuOpen ? "rotate-180" : ""}`}
                 />
               </button>
 

@@ -30,7 +30,7 @@ const EVENT_COLUMNS = sql`
   e.id as event_id, e.public_code, e.name as event_name, e.event_date::text as event_date, e.venue, e.status,
   e.gallery_expires_at::text as gallery_expires_at,
   (now() at time zone 'Asia/Kolkata')::date > e.gallery_expires_at as expired,
-  pp.studio_name, pp.logo_key, pp.brand_image_key, pp.phone as studio_phone, pp.instagram, pp.website`;
+  pp.studio_name, pp.display_name, pp.logo_key, pp.brand_image_key, pp.phone as studio_phone, pp.instagram, pp.website`;
 
 async function toPublicEvent(r: Raw): Promise<PublicEvent> {
   const storage = getStorage();
@@ -46,6 +46,7 @@ async function toPublicEvent(r: Raw): Promise<PublicEvent> {
     state: r.expired ? "expired" : r.status === "archived" ? "closed" : "open",
     studio: {
       studioName: String(r.studio_name),
+      displayName: String(r.display_name ?? ""),
       logoUrl,
       brandImageUrl,
       phone: String(r.studio_phone ?? ""),

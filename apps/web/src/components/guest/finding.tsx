@@ -8,7 +8,7 @@ export function Finding({ studio, guestName }: { studio: StudioBranding; guestNa
   return (
     <main className="relative mx-auto flex min-h-dvh w-full max-w-md flex-col overflow-hidden px-4" aria-busy="true">
       <div className="pointer-events-none absolute -top-16 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-secondary-container/25 blur-3xl" />
-      <StudioHeader studio={studio} />
+      <StudioHeader studio={studio} profile={false} />
 
       <div className="relative flex flex-1 flex-col items-center justify-center py-8">
         <div className="relative mb-8 flex h-56 w-56 items-center justify-center" aria-hidden="true">

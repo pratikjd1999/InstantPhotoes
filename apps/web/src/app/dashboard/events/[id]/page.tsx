@@ -61,7 +61,7 @@ function Workspace() {
 
   const [qr, setQr] = useState<string | null>(null);
   useEffect(() => {
-    if (event) qrDataUrl(event.publicUrl, 160).then(setQr);
+    if (event) qrDataUrl(event.publicUrl).then(setQr);
   }, [event?.publicUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && !event) {
@@ -98,7 +98,7 @@ function Workspace() {
       </nav>
 
       <section className="relative overflow-hidden rounded-2xl bg-surface-low p-6 shadow-sm ring-1 ring-outline/60 lg:p-8">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-start">
+        <div className="flex items-start justify-between gap-4 md:gap-6">
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-body-sm text-on-surface-variant">
               <EventStatusBadge status={event.status} />
@@ -118,23 +118,15 @@ function Workspace() {
               {profile.data?.profile.studioName ? `${profile.data.profile.studioName} · ` : ""}Gallery open until {fmtDate(event.galleryExpiresAt)}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setTab("qr")}
-            className="flex shrink-0 items-center gap-3 self-start rounded-xl bg-surface-lowest p-2 pr-4 shadow-sm ring-1 ring-outline/60 transition-shadow hover:shadow-md"
-            title="Open the QR code"
-          >
+          {/* Sits beside the title, no taller than it, so the stats stay where they are. Printing and sharing live in the QR code tab. */}
+          <div className="shrink-0 rounded-lg bg-white p-1 shadow-sm ring-1 ring-outline/60">
             {qr ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={qr} alt="" className="h-14 w-14 rounded-md" />
+              <img src={qr} alt="Event QR code" className="size-20 rounded md:size-26" />
             ) : (
-              <div className="h-14 w-14 animate-pulse rounded-md bg-surface-container" />
+              <div className="size-20 animate-pulse rounded bg-surface-container md:size-26" />
             )}
-            <span className="text-left text-label-sm text-on-surface-variant">
-              <span className="block font-semibold text-on-surface">Event QR</span>
-              Print or share
-            </span>
-          </button>
+          </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
           {tiles.map((t) => (
