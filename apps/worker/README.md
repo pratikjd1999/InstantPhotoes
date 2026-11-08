@@ -9,7 +9,7 @@ It runs in Docker and talks to the same Neon database and R2 bucket as the app. 
 
 1. reads the original from R2 and applies EXIF rotation
 2. writes `events/{eventId}/web/{photoId}.jpg` (long edge 2048 px, ~500 KB) and `.../thumbs/{photoId}.jpg` (400 px, ~30 KB), with EXIF and GPS removed
-3. finds faces (YuNet; ignores faces under 40 px or below 0.8 confidence) and makes a 128-d embedding for each (SFace)
+3. finds faces (YuNet; ignores faces under 16 px or below 0.5 confidence) and makes a 128-d embedding for each (SFace)
 4. saves the faces, marks the photo `ready` with width, height, capture time and face count
 5. matches the new faces against the event's registered guests (`guest_photos`, cosine similarity ≥ `MATCH_THRESHOLD`)
 
@@ -54,7 +54,7 @@ Without the `R2_*` variables it reads and writes `.local/storage`, the app's dev
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | | Same bucket as the app |
 | `WORKER_CONCURRENCY` | 2 | Photos processed at once. Set to the number of CPU cores on the server. |
 | `MATCH_THRESHOLD` | 0.363 | Must match the app's value. Tune on real photos before launch (PRD §10.3). |
-| `MIN_FACE_PX`, `MIN_FACE_SCORE` | 40, 0.8 | Smaller or less certain faces are ignored |
+| `MIN_FACE_PX`, `MIN_FACE_SCORE` | 16, 0.5 | Smaller or less certain faces are ignored. Kept low so blurry and small faces still match (phase 1). |
 | `ACTIVE_POLL_SECONDS`, `IDLE_POLL_SECONDS` | 3, 1800 | Queue polling |
 | `CAMERA_TIMEZONE` | Asia/Kolkata | Used for EXIF capture times that have no offset |
 

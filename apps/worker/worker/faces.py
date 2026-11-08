@@ -42,7 +42,7 @@ class FaceEngine:
     def __init__(self, models_dir: str, min_score: float):
         d = Path(models_dir)
         # Low built-in threshold; filtering happens in detect() so photos and selfies can use different rules.
-        self.detector = cv2.FaceDetectorYN.create(str(d / DETECTOR), "", (320, 320), 0.6, 0.3, 5000)
+        self.detector = cv2.FaceDetectorYN.create(str(d / DETECTOR), "", (320, 320), 0.5, 0.3, 5000)
         self.recognizer = cv2.FaceRecognizerSF.create(str(d / RECOGNIZER), "")
         self.min_score = min_score
 

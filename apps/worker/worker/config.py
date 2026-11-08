@@ -25,6 +25,7 @@ class Settings:
     # OpenCV's recommended SFace cosine threshold (PRD §10.3). The app must use the same value (MATCH_THRESHOLD).
     match_threshold: float
     # Faces smaller than this (pixels, on the 2048 px web copy) or less confident are ignored (PRC-3).
+    # Kept low so blurry, side-on and small faces still reach guests; "Not me" handles the odd wrong match.
     min_face_px: int
     min_face_score: float
     # Queue polling: fast while uploads are coming in, slow when idle so Neon can suspend. The app also calls /wake.
@@ -50,8 +51,8 @@ def load() -> Settings:
         models_dir=os.environ.get("MODELS_DIR", "models"),
         concurrency=max(1, _int("WORKER_CONCURRENCY", 2)),
         match_threshold=_float("MATCH_THRESHOLD", 0.363),
-        min_face_px=_int("MIN_FACE_PX", 40),
-        min_face_score=_float("MIN_FACE_SCORE", 0.8),
+        min_face_px=_int("MIN_FACE_PX", 16),
+        min_face_score=_float("MIN_FACE_SCORE", 0.5),
         active_poll_seconds=_int("ACTIVE_POLL_SECONDS", 3),
         idle_poll_seconds=_int("IDLE_POLL_SECONDS", 1800),
         camera_timezone=os.environ.get("CAMERA_TIMEZONE", "Asia/Kolkata"),
