@@ -75,3 +75,19 @@ body {
     scroll-behavior: smooth;
   }
 }
+
+/* Tailwind v4 gives buttons the default arrow cursor; show the hand on everything clickable. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  select:not(:disabled),
+  summary,
+  label[for],
+  label:has(> input[type="file"], > input[type="checkbox"], > input[type="radio"]),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

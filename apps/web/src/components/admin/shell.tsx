@@ -119,7 +119,8 @@ export function AppShell({
 
   const sidebar = (
     <nav aria-label={config.area} className="flex flex-col gap-6">
-      <div className="flex items-center gap-3 px-3">
+      {/* The logo goes to the area's first page: Dashboard for photographers, Photographers for the admin. */}
+      <Link href={NAV[0].href} aria-label="InstantPhotos home" className="flex w-fit items-center gap-3 rounded-lg px-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
           <CameraIcon className="h-5 w-5" />
         </div>
@@ -129,7 +130,7 @@ export function AppShell({
             {config.roleLabel}
           </span>
         </div>
-      </div>
+      </Link>
       <div className="mx-3 h-px bg-outline" />
       <ul className="flex flex-col gap-1.5 px-1">
         {NAV.map((item) => {
@@ -212,7 +213,7 @@ export function AppShell({
               {userMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl bg-surface-lowest py-1 shadow-xl ring-1 ring-outline"
+                  className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl bg-surface-lowest py-1 text-on-surface shadow-xl ring-1 ring-outline"
                 >
                   <div className="border-b border-outline/60 px-4 py-3 sm:hidden">
                     <p className="text-label-md font-semibold">{userName}</p>
