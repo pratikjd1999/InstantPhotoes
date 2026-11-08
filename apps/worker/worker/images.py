@@ -56,7 +56,9 @@ def _open(data: bytes, max_edge: int) -> tuple[Image.Image, int, int, Image.Imag
     """Decodes at reduced size where the JPEG allows it (much faster for 24 MP files). Returns (rotated RGB, w, h, raw)."""
     try:
         raw = Image.open(io.BytesIO(data))
-        if raw.format != "JPEG":
+        # MPO is a JPEG with extra embedded images (a preview, a depth map), written by many cameras and phones.
+        # Pillow reads its first frame, the photo itself, like any JPEG.
+        if raw.format not in ("JPEG", "MPO"):
             raise BadImage(f"Not a JPEG ({raw.format}).")
         w, h = raw.size
         scale = max_edge / max(w, h)
