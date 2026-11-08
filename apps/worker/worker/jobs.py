@@ -189,7 +189,7 @@ class JobRunner:
         web = images.jpeg(prepared.web, 82, prepared.icc)
         thumb = images.jpeg(prepared.web, 75, prepared.icc, max_edge=images.THUMB_EDGE)
         puts = [self.uploads.submit(self.storage.put, web_key, web), self.uploads.submit(self.storage.put, thumb_key, thumb)]
-        faces = engine.detect(to_bgr(prepared.web), self.s.min_face_px)  # runs while the copies upload
+        faces = engine.detect(to_bgr(prepared.web), self.s.min_face_px, self.s.sure_face_score)  # runs while the copies upload
         for p in puts:
             p.result()
 

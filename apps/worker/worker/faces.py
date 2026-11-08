@@ -14,6 +14,10 @@ from PIL import Image
 DETECTOR = "face_detection_yunet_2023mar.onnx"
 RECOGNIZER = "face_recognition_sface_2021dec.onnx"
 
+# Size range (shorter side, pixels) for faces the detector is unsure about. Smaller ones are too small to identify;
+# a real face larger than this is detected with high confidence, so an unsure large box is almost always background.
+UNSURE_PX = (40, 160)
+
 
 @dataclass
 class Face:
@@ -46,14 +50,18 @@ class FaceEngine:
         self.recognizer = cv2.FaceRecognizerSF.create(str(d / RECOGNIZER), "")
         self.min_score = min_score
 
-    def detect(self, bgr: np.ndarray, min_px: int) -> list[Face]:
+    def detect(self, bgr: np.ndarray, min_px: int, sure_score: float | None = None) -> list[Face]:
+        """`sure_score`: faces scoring below it must also fall within UNSURE_PX. Selfies leave it out."""
         h, w = bgr.shape[:2]
         self.detector.setInputSize((w, h))
         _, rows = self.detector.detect(bgr)
         faces: list[Face] = []
         for row in rows if rows is not None else []:
             x, y, fw, fh, score = float(row[0]), float(row[1]), float(row[2]), float(row[3]), float(row[14])
-            if score < self.min_score or min(fw, fh) < min_px:
+            side = min(fw, fh)
+            if score < self.min_score or side < min_px:
+                continue
+            if sure_score is not None and score < sure_score and not UNSURE_PX[0] <= side <= UNSURE_PX[1]:
                 continue
             aligned = self.recognizer.alignCrop(bgr, row)
             vec = self.recognizer.feature(aligned).flatten().astype(np.float32)
